@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2023 genua GmbH
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any

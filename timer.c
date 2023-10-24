@@ -1,9 +1,5 @@
 /*
  * Copyright (c) 2023 genua GmbH
- * All rights reserved.
- */
-
-/*
  * Copyright (c) 2010-2013 Reyk Floeter <reyk@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
