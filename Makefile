@@ -1,8 +1,8 @@
 PROG=		pfresolved
-NOMAN=		yes
 SRCS=		pfresolved.c
 SRCS+=		forwarder.c log.c pftable.c proc.c timer.c util.c
 SRCS+=		parse.y
+MAN=		pfresolved.8 pfresolved.conf.5
 
 LDADD+=		-lutil -levent -lexecinfo -lunbound
 DPADD+=		${LIBUTIL} ${LIBEVENT} ${LIBEXECINFO} ${LIBUNBOUND}
