@@ -1,0 +1,109 @@
+.\"	$OpenBSD$
+.\"
+.\" Copyright (c) 2023 genua GmbH <bluhm@genua.de>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate$
+.Dt PFRESOLVED.CONF 5
+.Os
+.Sh NAME
+.Nm pfresolved.conf
+.Nd pf resolve daemon configuration file
+.Sh DESCRIPTION
+.Nm
+is the configuration file for
+.Xr pfresolved 8 .
+It is used to configure the hosts that should be resolved by
+.Xr pfresolved 8
+and the
+.Xr pf 4
+tables that should be updated with the results.
+.Pp
+.Nm
+is divided into two sections:
+.Bl -tag -width xxxx
+.It Sy Macros
+User-defined macros may be defined and used later, simplifying the
+configuration file.
+.It Sy Tables
+Definition of the pf(4) tables and which hosts they should contain.
+.El
+.Pp
+Lines beginning with a hash mark
+.Pq Ql #
+and empty lines are comments and will be ignored.
+.Pp
+IP addresses can be specified in CIDR notation.
+.Pp
+Additional files can be included with the
+.Ic include
+keyword, for example:
+.Bd -literal -offset indent
+include "/path/to/file"
+.Ed
+.Sh MACROS
+Macros can be defined that will later be expanded in context.
+Macro names must start with a letter, digit, or underscore, and may
+contain any of those characters.
+Macro names may not be reserved words (for example
+.Ic include ) .
+Macros are not expanded inside quotes.
+.Pp
+For example:
+.Bd -literal -offset indent
+my_host = "www.example.com"
+myTable { $my_host }
+.Ed
+.Sh TABLES
+Table definitions have the following format:
+.Bd -literal -offset indent
+table_name {
+	address_list
+}
+.Ed
+.Bl -tag -width xxxx
+.It Ic table_name
+The name of the
+.Xr pf 4
+table that should be updated with the resolve results of the specified
+.Ic address_list .
+If the table does not yet exist in
+.Xr pf 4
+it will be created by
+.Xr pfresolved 8
+.It Ic address_list
+A list of hostnames that should be resolved by
+.Xr pfresolved 8
+for the specified table.
+The list can also contain IP addresses.
+These will be directly added to the table when the configuration
+file is loaded.
+Entries in the list may be separated by comma or newline.
+.El
+.Sh EXAMPLES
+.Bd -literal -offset indent
+myTable1 { example.com, 192.0.2.0/24 }
+
+myTable2 {
+	example.net
+	example.org
+	198.51.100.0
+	include "/list/with/hosts"
+}
+.Ed
+.Sh SEE ALSO
+.Xr pf 4 ,
+.Xr pfresolved 8
+.Sh AUTHORS
+.An Carsten Beckmann
