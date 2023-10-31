@@ -65,7 +65,7 @@ forwarder_run(struct privsep *ps, struct privsep_proc *p, void *arg)
 	struct pfresolved	*env = ps->ps_env;
 	int			 fd;
 
-	if (pledge("stdio inet rpath", NULL) == -1)
+	if (pledge("stdio dns inet rpath", NULL) == -1)
 		fatal("%s: pledge", __func__);
 
 	if ((fd = ub_fd(env->sc_ub_ctx)) == -1)
