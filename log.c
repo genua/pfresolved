@@ -54,6 +54,8 @@ __dead void fatal(const char *, ...)
 __dead void fatalx(const char *, ...)
 	    __attribute__((__format__ (printf, 1, 2)));
 
+static struct syslog_data sdata = SYSLOG_DATA_INIT;
+
 void
 log_init(int n_debug, int facility)
 {
@@ -64,7 +66,7 @@ log_init(int n_debug, int facility)
 	log_procinit(__progname);
 
 	if (!debug)
-		openlog(__progname, LOG_PID | LOG_NDELAY, facility);
+		openlog_r(__progname, LOG_PID | LOG_NDELAY, facility, &sdata);
 
 	tzset();
 }
@@ -115,7 +117,7 @@ vlog(int pri, const char *fmt, va_list ap)
 		}
 		fflush(stderr);
 	} else
-		vsyslog(pri, fmt, ap);
+		vsyslog_r(pri, &sdata, fmt, ap);
 
 	errno = saved_errno;
 }

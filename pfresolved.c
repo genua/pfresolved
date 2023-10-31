@@ -184,6 +184,7 @@ main(int argc, char **argv)
 	ps = &env->sc_ps;
 	ps->ps_env = env;
 
+	env->sc_no_daemon = debug;
 	env->sc_hints_file = hints_file;
 	env->sc_min_ttl = min_ttl;
 	env->sc_max_ttl = max_ttl;
@@ -708,6 +709,13 @@ parent_add_table_entries(struct pfresolved *env, struct pfresolved_host *host,
 			entry->pfte_addr = *address;
 			RB_INSERT(pfresolved_table_entries,
 				&table_ref->pftr_table->pft_entries, entry);
+		} else if (entry->pfte_refcount < 0 ||
+		    (entry->pfte_refcount == 0 && !entry->pfte_static)) {
+			log_errorx("%s: entries for table %s are inconsistent: "
+			    "refcount was %d before incrementing for %s (%s)",
+			    __func__, table_ref->pftr_table->pft_name,
+			    entry->pfte_refcount, print_address(address),
+			    entry->pfte_static ? "static" : "not static");
 		}
 		entry->pfte_refcount++;
 	}
@@ -727,9 +735,19 @@ parent_remove_table_entries(struct pfresolved *env,
 		old_entry = RB_FIND(pfresolved_table_entries,
 		    &table_ref->pftr_table->pft_entries, &search_key);
 		if (old_entry == NULL) {
-			log_errorx("%s: entries for table %s are inconsistent",
-			    __func__, table_ref->pftr_table->pft_name);
+			log_errorx("%s: entries for table %s are inconsistent: "
+			    "old entry not found for %s",
+			    __func__, table_ref->pftr_table->pft_name,
+			    print_address(address));
 			continue;
+		}
+
+		if (old_entry->pfte_refcount <= 0) {
+			log_errorx("%s: entries for table %s are inconsistent: "
+			    "refcount was %d before decrementing for %s",
+			    __func__, table_ref->pftr_table->pft_name,
+			    old_entry->pfte_refcount,
+			    print_address(address));
 		}
 
 		old_entry->pfte_refcount--;
