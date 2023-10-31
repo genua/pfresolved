@@ -132,6 +132,43 @@ struct pfresolved_timer {
 	void			*tmr_cbarg;
 };
 
+/*
+ * The general data structure looks like this:
+ *
+ * pfresolved -------------------------------
+ *    |                                     |
+ *   1:n                                   1:n
+ *    |                                     |
+ *    v                                     v
+ *   host -- 1:n --> table_ref -- 1:1 --> table
+ *    |                                     |
+ *   1:n                                   1:n
+ *    |                                     |
+ *    v            logical link             v
+ * address         --- 1:n --->        table_entry
+ *
+ * pfresolved contains an RB_TREE of tables and an RB_TREE of hosts.
+ *
+ * The hosts are not directly part of a table to avoid data duplication since
+ * they are allowed to be included in multiple tables. Instead the association
+ * between hosts and tables is done indirectly: Each host contains an RB_TREE of
+ * table refs that link to a table. Additionally, hosts contain an array of
+ * addresses that is updated with each resolve.
+ *
+ * Each table contains an RB_TREE of table entries. These table entries contain
+ * one address each that was either defined statically for that table or that
+ * was the result of a DNS resolve for a host associated with this table.
+ *
+ * Additionally, there is a purely logical link between addresses of a host and
+ * the table entries for that address. Each address of a host has a corresponding
+ * table entry in all tables the host belongs to. When the addresses for a host
+ * are updated by a DNS resolve the tables that this host is in and therefore
+ * the corresponding table entries are also updated. The table entries keep
+ * track of how many logical references there are to themselves. This is done
+ * to ensure that addresses are only removed from a table when they are no
+ * longer referenced by any host.
+ */
+
 struct pfresolved_address {
 	sa_family_t			 pfa_af;
 	union {
@@ -182,6 +219,7 @@ RB_HEAD(pfresolved_hosts, pfresolved_host);
 RB_PROTOTYPE(pfresolved_hosts, pfresolved_host, pfh_node, pfh_cmp);
 
 struct pfresolved {
+	int					 sc_no_daemon;
 	char					 sc_conffile[PATH_MAX];
 	struct pfresolved_tables		 sc_tables;
 	struct pfresolved_hosts			 sc_hosts;

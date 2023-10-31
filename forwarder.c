@@ -78,7 +78,8 @@ forwarder_run(struct privsep *ps, struct privsep_proc *p, void *arg)
 	p->p_shutdown = forwarder_shutdown;
 }
 
-void forwarder_shutdown(void)
+void
+forwarder_shutdown(void)
 {
 	struct pfresolved	*env = pfresolved_env;
 
@@ -169,6 +170,11 @@ forwarder_ub_ctx_init(struct pfresolved *env)
 
 	env->sc_ub_ctx = ctx;
 
+	if (!env->sc_no_daemon && (res = ub_ctx_set_option(ctx, "use-syslog:",
+	    "yes")) != 0)
+		fatalx("%s: ub_ctx_set_option use-syslog failed: %s", __func__,
+		    ub_strerror(res));
+
 	/* use threads instead of fork(2) */
 	if ((res = ub_ctx_async(ctx, 1)) != 0)
 		fatalx("%s: ub_ctx_async failed: %s", __func__,
@@ -251,81 +257,97 @@ forwarder_ub_resolve_async_cb(void *arg, int err, struct ub_result *result)
 {
 	struct pfresolved		*env = pfresolved_env;
 	char				*hostname = arg;
+	char				*qtype_str;
 	sa_family_t			 af;
-	int				 hostname_len, num_addresses = 0;
+	int				 hostname_len;
+	int				 num_addresses = 0, max_addresses = 0;
 	struct pfresolved_address	*addresses = NULL;
 	struct iovec			 iov[6];
-	int				 iovcnt = 0;
+	int				 iovcnt = 0, imsg_data_size = 0;
 	int				 fail = 0, type;
 
-	log_debug("%s: result for %s: qtype: %d, qclass: %d, rcode: %d, "
+	qtype_str = result->qtype == DNS_RR_TYPE_A ? "A" : "AAAA";
+
+	log_debug("%s: result for %s (%s): qtype: %d, qclass: %d, rcode: %d, "
 	    "canonname: %s, havedata: %d, nxdomain: %d, secure: %d, bogus: %d, "
 	    "why_bogus: %s, was_ratelimited: %d, ttl: %d", __func__, hostname,
-	    result->qtype, result->qclass, result->rcode,
+	    qtype_str, result->qtype, result->qclass, result->rcode,
 	    result->canonname ? result->canonname : "NULL", result->havedata,
 	    result->nxdomain, result->secure, result->bogus,
 	    result->why_bogus ? result->why_bogus : "NULL",
 	    result->was_ratelimited, result->ttl);
 
 	af = result->qtype == DNS_RR_TYPE_A ? AF_INET : AF_INET6;
-	iov[0].iov_base = &af;
-	iov[0].iov_len = sizeof(af);
+	iov[iovcnt].iov_base = &af;
+	iov[iovcnt].iov_len = sizeof(af);
+	imsg_data_size += sizeof(af);
 	iovcnt++;
 
 	hostname_len = strlen(hostname);
-	iov[1].iov_base = &hostname_len;
-	iov[1].iov_len = sizeof(hostname_len);
+	iov[iovcnt].iov_base = &hostname_len;
+	iov[iovcnt].iov_len = sizeof(hostname_len);
+	imsg_data_size += sizeof(hostname_len);
 	iovcnt++;
-	iov[2].iov_base = hostname;
-	iov[2].iov_len = hostname_len;
+	iov[iovcnt].iov_base = hostname;
+	iov[iovcnt].iov_len = hostname_len;
+	imsg_data_size += hostname_len;
 	iovcnt++;
 
 	if (result->bogus) {
 		log_warn("%s: DNSSEC validation for %s (%s) failed: %s",
-		    __func__, hostname,
-		    result->qtype == DNS_RR_TYPE_A ? "A" : "AAAA",
-		    result->why_bogus);
+		    __func__, hostname, qtype_str, result->why_bogus);
 		if (env->sc_dnssec_level >= DNSSEC_VALIDATE) {
 			fail = 1;
 			goto done;
 		}
 	}
 
-	if (result->rcode != DNS_RCODE_NOERROR &&
-	    result->rcode != DNS_RCODE_NXDOMAIN) {
-		log_warn("%s: query for %s (%s) failed with rcode: %d",
-		    __func__, hostname,
-		    result->qtype == DNS_RR_TYPE_A ? "A" : "AAAA",
-		    result->rcode);
-		fail = 1;
-		goto done;
+	switch (result->rcode) {
+		case DNS_RCODE_NOERROR:
+		case DNS_RCODE_NXDOMAIN:
+			break;
+		default:
+			log_warn("%s: query for %s (%s) failed with rcode: %d",
+			    __func__, hostname, qtype_str, result->rcode);
+			fail = 1;
+			goto done;
 	}
 
 	if (!result->secure && env->sc_dnssec_level >= DNSSEC_FORCE) {
 		log_warn("%s: DNSSEC required but not available for %s (%s)",
-		    __func__, hostname,
-		    result->qtype == DNS_RR_TYPE_A ? "A" : "AAAA");
+		    __func__, hostname, qtype_str);
 		fail = 1;
 		goto done;
 	}
 
-	iov[3].iov_base = &result->ttl;
-	iov[3].iov_len = sizeof(result->ttl);
+	iov[iovcnt].iov_base = &result->ttl;
+	iov[iovcnt].iov_len = sizeof(result->ttl);
+	imsg_data_size += sizeof(result->ttl);
 	iovcnt++;
 
 	if (result->nxdomain) {
 		log_notice("%s: query for %s (%s) returned NXDOMAIN", __func__,
-		    hostname, result->qtype == DNS_RR_TYPE_A ? "A" : "AAAA");
+		    hostname, qtype_str);
 		goto done;
 	}
 
 	if (!result->havedata || !result->data[0]) {
 		log_info("%s: query for %s (%s) returned no data", __func__,
-		    hostname, result->qtype == DNS_RR_TYPE_A ? "A" : "AAAA");
+		    hostname, qtype_str);
 		goto done;
 	}
 
+	max_addresses = (MAX_IMSGSIZE - IMSG_HEADER_SIZE - imsg_data_size -
+	    sizeof(num_addresses)) / sizeof(*addresses);
+
 	while (result->data[num_addresses] != NULL) {
+		if (num_addresses == max_addresses) {
+			log_warn("%s: query for %s (%s): maximum of %d addresses"
+			    " exceeded, discarding remaining addresses",
+			    __func__, hostname, qtype_str, max_addresses);
+			break;
+		}
+
 		if ((addresses = recallocarray(addresses, num_addresses,
 		    num_addresses + 1, sizeof(*addresses))) == NULL)
 			fatal("%s: recallocarray", __func__);
@@ -333,9 +355,8 @@ forwarder_ub_resolve_async_cb(void *arg, int err, struct ub_result *result)
 		if (af == AF_INET) {
 			if (sizeof(addresses[num_addresses].pfa_addr.in4) !=
 			    result->len[num_addresses]) {
-				log_errorx("query for %s (%s): data size mismatch in result",
-				hostname,
-				result->qtype == DNS_RR_TYPE_A ? "A" : "AAAA");
+				log_errorx("%s: query for %s (A): data size "
+				    "mismatch in result", __func__, hostname);
 				fail = 1;
 				goto done;
 			}
@@ -347,9 +368,8 @@ forwarder_ub_resolve_async_cb(void *arg, int err, struct ub_result *result)
 		} else {
 			if (sizeof(addresses[num_addresses].pfa_addr.in6) !=
 			    result->len[num_addresses]) {
-				log_errorx("query for %s (%s): data size mismatch in result",
-				hostname,
-				result->qtype == DNS_RR_TYPE_A ? "A" : "AAAA");
+				log_errorx("%s: query for %s (AAAA): data size "
+				    "mismatch in result", __func__, hostname);
 				fail = 1;
 				goto done;
 			}
@@ -361,17 +381,17 @@ forwarder_ub_resolve_async_cb(void *arg, int err, struct ub_result *result)
 		}
 
 		log_debug("%s: query for %s (%s): address %d: %s", __func__,
-		    hostname, result->qtype == DNS_RR_TYPE_A ? "A" : "AAAA",
-		    num_addresses, print_address(&addresses[num_addresses]));
+		    hostname, qtype_str, num_addresses,
+		    print_address(&addresses[num_addresses]));
 
 		num_addresses++;
 	}
 
-	iov[4].iov_base = &num_addresses;
-	iov[4].iov_len = sizeof(num_addresses);
+	iov[iovcnt].iov_base = &num_addresses;
+	iov[iovcnt].iov_len = sizeof(num_addresses);
 	iovcnt++;
-	iov[5].iov_base = addresses;
-	iov[5].iov_len = num_addresses * sizeof(*addresses);
+	iov[iovcnt].iov_base = addresses;
+	iov[iovcnt].iov_len = num_addresses * sizeof(*addresses);
 	iovcnt++;
 
 done:

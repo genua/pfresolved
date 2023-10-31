@@ -2,3 +2,39 @@ Convert files with FQDN into IP addreses and write them into pf
 tables.  The daemon pfresolved allows to consume lists of hostnames
 that can be used in pf rules.  Thses lists are updated dynamically
 using DNS.
+
+Short description of notable files:
+
+pfresolved.c:
+	Main file for the parent process. Keeps track of resolve
+	timeouts, send resolve requests to the forwarder process
+	and updates internal data structures and the pf(4) tables
+	with the results.
+
+forwarder.c:
+	Main file for the forwarder process. Sets up libunbound in
+	the beginning and uses it to process resolve requests it
+	receives from the parent.
+
+pftable.c:
+	Contains the functions necessary to update pf(4) tables.
+
+util.c:
+	Contains a few minor utility functions.
+
+parse.y:
+	Responsible for parsing the configuration file. The general
+	lexing/parsing infrastructure was copied from iked's parse.y.
+
+proc.c:
+	Responsible for setting up the privsep infrastructure. Copied
+	from iked's proc.c with minor changes to disable control sockets
+	for now.
+
+log.c:
+	Contains logging utilities. Mostly copied from iked's log.c
+	with a few changes to the log levels.
+
+timer.c:
+	Contains utility functions for setting up timeouts with
+	libevent. Mostly copied from iked's timer.c.
