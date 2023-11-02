@@ -527,7 +527,7 @@ parent_get_resolve_result_data(struct pfresolved *env, struct imsg *imsg,
 	ptr += sizeof(hostname_len);
 	len -= sizeof(hostname_len);
 
-	if (len < (size_t)hostname_len)
+	if (hostname_len < 0 || len < (size_t)hostname_len)
 		fatalx("%s: imsg length too small", __func__);
 
 	memcpy(search_key.pfh_hostname, ptr, hostname_len);
