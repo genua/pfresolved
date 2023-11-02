@@ -17,4 +17,11 @@ CFLAGS+=	-Werror
 
 LDFLAGS+=	-L/usr/local/lib
 
+test: pfresolved
+	PFRESOLVED=${.OBJDIR}/pfresolved ${MAKE} -C ${.CURDIR}/regress
+
+.if (make(clean) || make(cleandir) || make(obj))
+SUBDIR +=	regress
+.endif
+
 .include <bsd.prog.mk>
