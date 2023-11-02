@@ -1,0 +1,32 @@
+name: CI
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: OpenBSD Virtual Machine
+        uses: cross-platform-actions/action@v0.21.0
+        with:
+          operating_system: openbsd
+          version: '7.4'
+          hypervisor: xhyve
+          run: |
+            uname -a
+            echo $SHELL
+            pwd
+            ls -lah
+            whoami
+            env | sort
+            echo == depend ==
+            sudo pkg_add libunbound
+            sudo useradd -m _pfresolved
+            echo == build ==
+            make all
+            echo == test ==
+            REGRESS_FAIL_EARLY=no SUDO=sudo make test 2>&1 | tee make.log
+            tail -n100 regress/pfresolved.log
+            ! grep -B1 FAILED make.log
