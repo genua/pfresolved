@@ -124,7 +124,7 @@ grammar		: /* empty */
 include		: INCLUDE STRING		{
 			struct file	*nfile;
 
-			if ((nfile = pushfile($2, 1)) == NULL) {
+			if ((nfile = pushfile($2, 0)) == NULL) {
 				yyerror("failed to include file %s", $2);
 				free($2);
 				YYERROR;
@@ -628,7 +628,7 @@ parse_config(const char *filename, struct pfresolved *x_env)
 	env = x_env;
 	cur_table = NULL;
 
-	if ((file = pushfile(filename, 1)) == NULL)
+	if ((file = pushfile(filename, 0)) == NULL)
 		return (-1);
 	topfile = file;
 
