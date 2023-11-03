@@ -68,7 +68,7 @@ sub child {
 	my @ktrace;
 	@ktrace = ($self->{ktraceexec}, "-i", "-f", $self->{ktracefile})
 	    if $self->{ktraceexec};
-	my @cmd = (@sudo, @ktrace, $self->{execfile}, "-dvv",
+	my @cmd = (@sudo, @ktrace, $self->{execfile}, "-dvvv",
 	    "-f", $self->{conffile});
 	print STDERR "execute: @cmd\n";
 	exec @cmd;
