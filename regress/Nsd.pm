@@ -17,7 +17,7 @@
 use strict;
 use warnings;
 
-package Pfresolved;
+package Nsd;
 use parent 'Proc';
 use Carp;
 use File::Basename;
@@ -26,15 +26,15 @@ use Sys::Hostname;
 sub new {
 	my $class = shift;
 	my %args = @_;
-	$args{conffile} ||= "pfresolved.conf";
-	$args{down} ||= "parent terminating";
-	$args{execfile} ||= $ENV{PFRESOLVED} ? $ENV{PFRESOLVED} : "pfresolved";
+	$args{conffile} ||= "nsd.conf";
+	$args{down} ||= "shutting down";
 	$args{func} = sub { Carp::confess "$class func may not be called" };
 	$args{ktraceexec} = "ktrace" if $args{ktrace};
 	$args{ktraceexec} = $ENV{KTRACE} if $ENV{KTRACE};
-	$args{ktracefile} ||= "pfresolved.ktrace";
-	$args{logfile} ||= "pfresolved.log";
-	$args{up} ||= "forwarder starting";
+	$args{ktracefile} ||= "nsd.ktrace";
+	$args{logfile} ||= "nsd.log";
+	$args{serial} ||= time();
+	$args{up} ||= "nsd started";
 
 	my $self = Proc::new($class, %args);
 
@@ -42,39 +42,46 @@ sub new {
 	open(my $fh, '>', $self->{conffile}) or die ref($self),
 	    " config file '$self->{conffile}' create failed: $!";
 	print $fh "# test $test\n";
-	print $fh "regress-pfresolved {\n";
-	foreach my $a (@{$self->{address_list} || []}) {
-		print $fh "	$a\n";
+	print $fh "server:\n";
+	print $fh "	chroot: \"\"\n";
+	print $fh "	ip-address: $self->{addr}\n";
+	print $fh "	pidfile: \"\"\n";
+	print $fh "	port: $self->{port}\n";
+	print $fh "	verbosity: 3\n";
+	print $fh "	zonesdir: .\n";
+	print $fh "zone:\n";
+	# libunbound does not process invalid domain
+	print $fh "	name: regress.\n";
+	print $fh "	zonefile: nsd.zone\n";
+
+	open(my $fz, '>', "nsd.zone") or die ref($self),
+	    " zone file 'nsd.zone' create failed: $!";
+	print $fz "; test $test\n";
+	print $fz "\$ORIGIN	regress.\n";
+	print $fz "\$TTL	86400\n";
+	print $fz "\@	IN	SOA	pfresolved root.pfresolved (\n";
+	print $fz "		$args{serial}	; serial number\n";
+	print $fz "		7200		; refresh\n";
+	print $fz "		600		; retry\n";
+	print $fz "		86400		; expire\n";
+	print $fz "		3600		; minimum TTL\n";
+	print $fz "	)\n";
+	foreach my $r (@{$self->{record_list} || []}) {
+		print $fz "$r\n";
 	}
-	print $fh  "}\n";
 
 	return $self;
 }
 
 sub child {
 	my $self = shift;
-	my @sudo = $ENV{SUDO} ? $ENV{SUDO} : "env";
-
-	my @pkill = (@sudo, "pkill", "-KILL", "-x", "pfresolved");
-	my @pgrep = ("pgrep", "-x", "pfresolved");
-	system(@pkill) && $? != 256
-	    and die ref($self), " system '@pkill' failed: $?";
-	while ($? == 0) {
-		print STDERR "pfresolved still running\n";
-		system(@pgrep) && $? != 256
-		    and die ref($self), " system '@pgrep' failed: $?";
-	}
-	print STDERR "pfresolved not running\n";
+	my @sudo = $ENV{SUDO} ? $ENV{SUDO} : ();
 
 	my @ktrace;
 	@ktrace = ($self->{ktraceexec}, "-i", "-f", $self->{ktracefile})
 	    if $self->{ktraceexec};
-	my $resolver;
-	$resolver = $self->{addr} if $self->{addr};
-	$resolver .= '@'.$self->{port} if $self->{port};
-	my @cmd = (@sudo, @ktrace, $self->{execfile}, "-dvvv",
-	    "-f", $self->{conffile});
-	push @cmd, "-r", $resolver if $resolver;
+	my @cmd = (@sudo, @ktrace, "/usr/sbin/nsd", "-d",
+	    "-c", $self->{conffile});
 	print STDERR "execute: @cmd\n";
 	exec @cmd;
 	die ref($self), " exec '@cmd' failed: $!";

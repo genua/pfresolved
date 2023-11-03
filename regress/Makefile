@@ -9,7 +9,12 @@ PFRESOLVED ?=		${.CURDIR}/../pfresolved
 PERLS =			Proc.pm Pfresolved.pm funcs.pl pfresolved.pl
 ARGS !=			cd ${.CURDIR} && ls args-*.pl
 REGRESS_TARGETS =       ${ARGS:S/^/run-/}
-CLEANFILES =		*.log *.conf ktrace.out stamp-* *.pid *.ktrace
+CLEANFILES =		*.log *.conf ktrace.out stamp-* *.pid *.ktrace *.zone
+
+REGRESS_SETUP_ONCE =	chmod-obj
+chmod-obj:
+	# nsd user needs read permission for zone file
+	-chmod o+rx ${.OBJDIR}
 
 # Set variables so that make runs with and without obj directory.
 # Only do that if necessary to keep visible output short.

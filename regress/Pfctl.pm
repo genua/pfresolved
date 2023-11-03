@@ -29,16 +29,20 @@ sub new {
 	$args{up} ||= "Table";
 
 	my $self = Proc::new($class, %args);
+
 	return $self;
 }
 
 sub child {
 	my $self = shift;
 	my $timeout = $self->{timeout} || 5;
-	my $updates = $self->{updates};
+	my $updated = $self->{updated};
 	my $pfresolved = $self->{pfresolved};
 
-	my $table = "updated addresses for pf table";
+	# make it possible to match on /added: 2,/ by passing array
+	my ($updates, $added) = ($updated->[0], $updated->[1]);
+
+	my $table = qr/updated addresses for pf table .*: added: $added,/;
 	my $tomsg = $timeout ? " after $timeout seconds" : "";
 	my $upmsg = $updates ? " for $updates times" : "";
 	$pfresolved->loggrep($table, $timeout, $updates)
@@ -53,7 +57,7 @@ sub func {
 	my $self = shift;
 	my @sudo = $ENV{SUDO} ? $ENV{SUDO} : ();
 
-	my @cmd = (@sudo, qw(pfctl -t regress-pfresolved -T show));
+	my @cmd = (@sudo, qw(/sbin/pfctl -t regress-pfresolved -T show));
 	system(@cmd)
 	    and die die ref($self), " command '@cmd' failed: $?";
 }
