@@ -19,6 +19,7 @@ use strict;
 use warnings;
 
 use Pfresolved;
+use Pfctl;
 require 'funcs.pl';
 
 sub usage {
@@ -36,13 +37,20 @@ if (@ARGV and -f $ARGV[-1]) {
 
 my $d = Pfresolved->new(
     %{$args{pfresolved}},
-    testfile            => $testfile,
+    testfile		=> $testfile,
+);
+my $s = Pfctl->new(
+    %{$args{pfctl}},
+    pfresolved		=> $d,
 );
 
 $d->run;
 $d->up;
 
+$s->run;
+$s->up;
+
 $d->kill_child;
 $d->down;
 
-check_logs(undef, $d, undef, %args);
+check_logs(undef, $d, $s, %args);

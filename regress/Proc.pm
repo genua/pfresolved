@@ -108,7 +108,6 @@ sub run {
 	do {
 		$self->child();
 		print STDERR $self->{up}, "\n";
-		$self->{begin} = time();
 		$self->{func}->($self);
 	} while ($self->{redo});
 	print STDERR "Shutdown", "\n";
