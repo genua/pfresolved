@@ -18,18 +18,18 @@ use strict;
 use warnings;
 
 sub check_logs {
-	my ($n, $d, $p, %args) = @_;
+	my ($n, $d, $s, %args) = @_;
 
 	return if $args{nocheck};
 
-	check_loggrep($n, $d, $p, %args);
+	check_loggrep($n, $d, $s, %args);
 }
 
 sub check_loggrep {
-	my ($n, $d, $p, %args) = @_;
+	my ($n, $d, $s, %args) = @_;
 
-	my %name2proc = (nsd => $n, pfresolved => $d, pf => $p);
-	foreach my $name (qw(pfresolved)) {
+	my %name2proc = (nsd => $n, pfresolved => $d, pfctl => $s);
+	foreach my $name (qw(pfresolved pfctl)) {
 		my $p = $name2proc{$name} or next;
 		my $pattern = $args{$name}{loggrep} or next;
 		$pattern = [ $pattern ] unless ref($pattern) eq 'ARRAY';

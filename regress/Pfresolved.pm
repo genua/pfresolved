@@ -43,6 +43,8 @@ sub new {
 	    " config file '$self->{conffile}' create failed: $!";
 	print $fh "# test $test\n";
 	print $fh "regress-pfresolved {\n";
+	print $fh "\t", join(",", @{$self->{address_list}}), "\n"
+	    if $self->{address_list};
 	print $fh  "\n}\n";
 
 	return $self;
