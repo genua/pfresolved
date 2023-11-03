@@ -16,7 +16,7 @@ our %args = (
 	},
     },
     pfctl => {
-	updates => 3,
+	updated => [1, 1],
 	loggrep => {
 	    qr/^   127.0.0.1$/ => 1,
 	    qr/^   ::1$/ => 1,

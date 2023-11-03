@@ -11,6 +11,7 @@ our %args = (
 	address_list => [qw(192.0.2.1 2001:DB8::1)],  # documentation IPs
     },
     pfctl => {
+	updated => [1, 2],
 	loggrep => {
 	    qr/^   192.0.2.1$/ => 1,
 	    qr/^   2001:db8::1$/ => 1,

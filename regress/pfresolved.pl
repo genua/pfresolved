@@ -18,6 +18,7 @@
 use strict;
 use warnings;
 
+use Nsd;
 use Pfresolved;
 use Pfctl;
 require 'funcs.pl';
@@ -35,22 +36,29 @@ if (@ARGV and -f $ARGV[-1]) {
 }
 @ARGV == 0 or usage();
 
+my $n = Nsd->new(
+    addr		=> $args{nsd}{listen}{addr} //= "127.0.0.1",
+    port		=> scalar find_ports(%{$args{nsd}{listen}}),
+    %{$args{nsd}},
+    testfile		=> $testfile,
+) if $args{nsd};
 my $d = Pfresolved->new(
+    addr		=> $n && $n->{addr},
+    port		=> $n && $n->{port},
     %{$args{pfresolved}},
     testfile		=> $testfile,
 );
 my $s = Pfctl->new(
     %{$args{pfctl}},
     pfresolved		=> $d,
-);
+) if $args{pfctl};
 
-$d->run;
-$d->up;
+$n->run->up if $n;
+$d->run->up;
+$s->run->up if $s;
 
-$s->run;
-$s->up;
+$s->down if $s;
+$d->kill_child->down;
+$n->kill_child->down if $n;
 
-$d->kill_child;
-$d->down;
-
-check_logs(undef, $d, $s, %args);
+check_logs($n, $d, $s, %args);
