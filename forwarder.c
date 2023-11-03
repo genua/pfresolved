@@ -40,6 +40,11 @@ static struct privsep_proc procs[] = {
 	{ "parent", PROC_PARENT, forwarder_dispatch_parent }
 };
 
+struct resolve_args {
+	char		*hostname;
+	sa_family_t	 af;
+};
+
 void
 forwarderproc(struct privsep *ps, struct privsep_proc *p)
 {
@@ -111,6 +116,7 @@ forwarder_process_resolvereq(struct pfresolved *env, struct imsg *imsg)
 	size_t				 len;
 	sa_family_t			 af;
 	char				*hostname;
+	struct resolve_args		*resolve_args;
 	int				 request_type, res, hostname_len;
 	struct iovec			 iov[3];
 	int				 iovcnt = 0;
@@ -135,8 +141,13 @@ forwarder_process_resolvereq(struct pfresolved *env, struct imsg *imsg)
 
 	request_type = af == AF_INET ? DNS_RR_TYPE_A : DNS_RR_TYPE_AAAA;
 
+	if ((resolve_args = calloc(1, sizeof(*resolve_args))) == NULL)
+		fatal("%s: calloc", __func__);
+	resolve_args->hostname = hostname;
+	resolve_args->af = af;
+
 	res = ub_resolve_async(env->sc_ub_ctx, hostname, request_type,
-	    DNS_CLASS_IN, hostname, forwarder_ub_resolve_async_cb, NULL);
+	    DNS_CLASS_IN, resolve_args, forwarder_ub_resolve_async_cb, NULL);
 	if (res != 0) {
 		log_errorx("%s: ub_resolve_async failed: %s", __func__,
 		    ub_strerror(res));
@@ -156,6 +167,7 @@ forwarder_process_resolvereq(struct pfresolved *env, struct imsg *imsg)
 		proc_composev(&env->sc_ps, PROC_PARENT, IMSG_RESOLVEREQ_FAIL,
 		    iov, iovcnt);
 		free(hostname);
+		free(resolve_args);
 	}
 }
 
@@ -256,7 +268,8 @@ void
 forwarder_ub_resolve_async_cb(void *arg, int err, struct ub_result *result)
 {
 	struct pfresolved		*env = pfresolved_env;
-	char				*hostname = arg;
+	struct resolve_args		*resolve_args = arg;
+	char				*hostname;
 	char				*qtype_str;
 	sa_family_t			 af;
 	int				 hostname_len;
@@ -266,18 +279,11 @@ forwarder_ub_resolve_async_cb(void *arg, int err, struct ub_result *result)
 	int				 iovcnt = 0, imsg_data_size = 0;
 	int				 fail = 0, type;
 
-	qtype_str = result->qtype == DNS_RR_TYPE_A ? "A" : "AAAA";
+	hostname = resolve_args->hostname;
+	af = resolve_args->af;
 
-	log_debug("%s: result for %s (%s): qtype: %d, qclass: %d, rcode: %d, "
-	    "canonname: %s, havedata: %d, nxdomain: %d, secure: %d, bogus: %d, "
-	    "why_bogus: %s, was_ratelimited: %d, ttl: %d", __func__, hostname,
-	    qtype_str, result->qtype, result->qclass, result->rcode,
-	    result->canonname ? result->canonname : "NULL", result->havedata,
-	    result->nxdomain, result->secure, result->bogus,
-	    result->why_bogus ? result->why_bogus : "NULL",
-	    result->was_ratelimited, result->ttl);
+	qtype_str = af == AF_INET ? "A" : "AAAA";
 
-	af = result->qtype == DNS_RR_TYPE_A ? AF_INET : AF_INET6;
 	iov[iovcnt].iov_base = &af;
 	iov[iovcnt].iov_len = sizeof(af);
 	imsg_data_size += sizeof(af);
@@ -292,6 +298,22 @@ forwarder_ub_resolve_async_cb(void *arg, int err, struct ub_result *result)
 	iov[iovcnt].iov_len = hostname_len;
 	imsg_data_size += hostname_len;
 	iovcnt++;
+
+	if (err != 0) {
+		log_errorx("%s: query for %s (%s) failed: %s", __func__,
+		    hostname, qtype_str, ub_strerror(err));
+		fail = 1;
+		goto done;
+	}
+
+	log_debug("%s: result for %s (%s): qtype: %d, qclass: %d, rcode: %d, "
+	    "canonname: %s, havedata: %d, nxdomain: %d, secure: %d, bogus: %d, "
+	    "why_bogus: %s, was_ratelimited: %d, ttl: %d", __func__, hostname,
+	    qtype_str, result->qtype, result->qclass, result->rcode,
+	    result->canonname ? result->canonname : "NULL", result->havedata,
+	    result->nxdomain, result->secure, result->bogus,
+	    result->why_bogus ? result->why_bogus : "NULL",
+	    result->was_ratelimited, result->ttl);
 
 	if (result->bogus) {
 		log_warn("%s: DNSSEC validation for %s (%s) failed: %s",
@@ -399,6 +421,7 @@ done:
 	proc_composev(&env->sc_ps, PROC_PARENT, type, iov, iovcnt);
 
 	free(hostname);
+	free(resolve_args);
 	free(addresses);
 	ub_resolve_free(result);
 }
