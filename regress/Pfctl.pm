@@ -34,12 +34,16 @@ sub new {
 
 sub child {
 	my $self = shift;
+	my $timeout = $self->{timeout} || 5;
+	my $updates = $self->{updates};
 	my $pfresolved = $self->{pfresolved};
 
-	my $table = "updating addresses for pf table";
-	$pfresolved->loggrep($table, 5)
-	    or die ref($self), " no '$table' in $pfresolved->{logfile} ".
-		"after 5 seconds";
+	my $table = "updated addresses for pf table";
+	my $tomsg = $timeout ? " after $timeout seconds" : "";
+	my $upmsg = $updates ? " for $updates times" : "";
+	$pfresolved->loggrep($table, $timeout, $updates)
+	    or die ref($self), " no '$table' in $pfresolved->{logfile}",
+		$tomsg, $upmsg;
 
 	open(STDOUT, '>&', \*STDERR)
 	    or die ref($self), " dup STDOUT failed: $!";
