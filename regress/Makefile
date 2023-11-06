@@ -36,6 +36,26 @@ run-$a: $a
 	    perl ${PERLINC} ${PERLPATH}pfresolved.pl ${PERLPATH}$a
 .endfor
 
+# create certificates for TLS
+
+CLEANFILES +=	*.crt *.key *.req *.srl
+
+ca.crt:
+	openssl req -batch -new \
+	    -subj /L=OpenBSD/O=pfresolved-regress/OU=ca/CN=root/ \
+	    -nodes -newkey rsa -keyout ${@:R}.key -x509 -out $@
+
+server.req:
+	openssl req -batch -new \
+	    -subj /L=OpenBSD/O=pfresolved-regress/OU=${@:R}/CN=localhost/ \
+	    -nodes -newkey rsa -keyout ${@:R}.key -out $@
+
+server.crt: ca.crt ${@:R}.req
+	openssl x509 -CAcreateserial -CAkey ca.key -CA ca.crt -req \
+	    -in ${@:R}.req -out $@
+
+${REGRESS_TARGETS:M*tls*}: server.crt
+
 # make perl syntax check for all args files
 
 .PHONY: syntax

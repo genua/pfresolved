@@ -72,9 +72,14 @@ sub child {
 	my $resolver;
 	$resolver = $self->{addr} if $self->{addr};
 	$resolver .= '@'.$self->{port} if $self->{port};
+	$resolver .= '#localhost' if $self->{tls};
 	my @cmd = (@sudo, @ktrace, $self->{execfile}, "-dvvv",
 	    "-f", $self->{conffile});
 	push @cmd, "-r", $resolver if $resolver;
+	if ($self->{tls}) {
+		push @cmd, "-C", "ca.crt" if $self->{tls};
+		push @cmd, "-T" if $self->{tls};
+	}
 	print STDERR "execute: @cmd\n";
 	exec @cmd;
 	die ref($self), " exec '@cmd' failed: $!";
