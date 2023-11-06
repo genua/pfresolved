@@ -21,6 +21,7 @@ package Nsd;
 use parent 'Proc';
 use Carp;
 use File::Basename;
+use Socket;
 use Sys::Hostname;
 
 sub new {
@@ -44,6 +45,14 @@ sub new {
 	print $fh "# test $test\n";
 	print $fh "server:\n";
 	print $fh "	chroot: \"\"\n";
+	if ($self->{listen}{domain} && $self->{listen}{domain} == AF_INET) {
+		print $fh "	do-ip4: yes\n";
+		print $fh "	do-ip6: no\n";
+	}
+	if ($self->{listen}{domain} && $self->{listen}{domain} == AF_INET6) {
+		print $fh "	do-ip4: no\n";
+		print $fh "	do-ip6: yes\n";
+	}
 	print $fh "	ip-address: $self->{addr}\n";
 	print $fh "	pidfile: \"\"\n";
 	print $fh "	port: $self->{port}\n";
