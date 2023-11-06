@@ -56,6 +56,11 @@ sub new {
 	print $fh "	ip-address: $self->{addr}\n";
 	print $fh "	pidfile: \"\"\n";
 	print $fh "	port: $self->{port}\n";
+	if ($self->{tls}) {
+		print $fh "	tls-port: $self->{port}\n";
+		print $fh "	tls-service-key: \"server.key\"\n";
+		print $fh "	tls-service-pem: \"server.crt\"\n";
+	}
 	print $fh "	verbosity: 3\n";
 	print $fh "	zonesdir: .\n";
 	print $fh "zone:\n";

@@ -39,12 +39,14 @@ if (@ARGV and -f $ARGV[-1]) {
 my $n = Nsd->new(
     addr		=> $args{nsd}{listen}{addr} //= "127.0.0.1",
     port		=> scalar find_ports(%{$args{nsd}{listen}}),
+    tls			=> ($args{nsd}{listen}{proto} // "") eq "tls",
     %{$args{nsd}},
     testfile		=> $testfile,
 ) if $args{nsd};
 my $d = Pfresolved->new(
     addr		=> $n && $n->{addr},
     port		=> $n && $n->{port},
+    tls			=> $n && $n->{tls},
     %{$args{pfresolved}},
     testfile		=> $testfile,
 );
