@@ -235,15 +235,18 @@ forwarder_ub_ctx_init(struct pfresolved *env)
 			fatalx("%s: ub_ctx_set_tls failed: %s", __func__,
 			    ub_strerror(res));
 
-		/* include root certs from /etc/ssl/cert.pem */
-		if ((res = ub_ctx_set_option(ctx, "tls-system-cert:", "yes")) != 0)
-			fatalx("%s: ub_ctx_set_option tls-system-cert failed: %s",
-			    __func__, ub_strerror(res));
-
-		if (env->sc_cert_bundle && (res = ub_ctx_set_option(ctx,
-		    "tls-cert-bundle:", env->sc_cert_bundle)) != 0)
-			fatalx("%s: ub_ctx_set_option tls-cert-bundle failed: %s",
-			    __func__, ub_strerror(res));
+		if (env->sc_cert_bundle) {
+			if ((res = ub_ctx_set_option(ctx, "tls-cert-bundle:",
+			    env->sc_cert_bundle)) != 0)
+				fatalx("%s: ub_ctx_set_option tls-cert-bundle "
+				    "failed: %s", __func__, ub_strerror(res));
+		} else {
+			/* include root certs from /etc/ssl/cert.pem */
+			if ((res = ub_ctx_set_option(ctx, "tls-system-cert:",
+			    "yes")) != 0)
+				fatalx("%s: ub_ctx_set_option tls-system-cert "
+				    "failed: %s", __func__, ub_strerror(res));
+		}
 	}
 
 	if (env->sc_dnssec_level > DNSSEC_NONE) {
