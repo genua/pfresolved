@@ -47,6 +47,24 @@ sub check_logs {
 	check_loggrep($n, $d, $s, %args);
 }
 
+sub compare($$) {
+	local $_ = $_[1];
+	if (/^\d+/) {
+		return $_[0] == $_;
+	} elsif (/^==(\d+)/) {
+		return $_[0] == $1;
+	} elsif (/^!=(\d+)/) {
+		return $_[0] != $1;
+	} elsif (/^>=(\d+)/) {
+		return $_[0] >= $1;
+	} elsif (/^<=(\d+)/) {
+		return $_[0] <= $1;
+	} elsif (/^~(\d+)/) {
+		return $1 * 0.8 <= $_[0] && $_[0] <= $1 * 1.2;
+	}
+	die "bad compare operator: $_";
+}
+
 sub check_loggrep {
 	my ($n, $d, $s, %args) = @_;
 
@@ -59,7 +77,7 @@ sub check_loggrep {
 			if (ref($pat) eq 'HASH') {
 				while (my($re, $num) = each %$pat) {
 					my @matches = $p->loggrep($re);
-					@matches == $num
+					compare(@matches, $num)
 					    or die "$name matches '@matches': ",
 					    "'$re' => $num";
 				}

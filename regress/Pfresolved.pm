@@ -72,7 +72,8 @@ sub child {
 	my $resolver;
 	$resolver = $self->{addr} if $self->{addr};
 	$resolver .= '@'.$self->{port} if $self->{port};
-	$resolver .= '#localhost' if $self->{tls};
+	my $hostname = $self->{hostname} || "localhost";
+	$resolver .= "#$hostname" if $self->{tls};
 	my @cmd = (@sudo, @ktrace, $self->{execfile}, "-dvvv",
 	    "-f", $self->{conffile});
 	push @cmd, "-r", $resolver if $resolver;
