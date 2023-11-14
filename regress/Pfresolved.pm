@@ -77,7 +77,8 @@ sub child {
 	    "-f", $self->{conffile});
 	push @cmd, "-r", $resolver if $resolver;
 	if ($self->{tls}) {
-		push @cmd, "-C", "ca.crt" if $self->{tls};
+		my $ca = $self->{ca} || "ca.crt";
+		push @cmd, "-C", $ca if $self->{tls};
 		push @cmd, "-T" if $self->{tls};
 	}
 	print STDERR "execute: @cmd\n";
