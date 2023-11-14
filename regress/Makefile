@@ -40,7 +40,7 @@ run-$a: $a
 
 CLEANFILES +=	*.crt *.key *.req *.srl
 
-ca.crt:
+ca.crt badca.crt:
 	openssl req -batch -new \
 	    -subj /L=OpenBSD/O=pfresolved-regress/OU=ca/CN=root/ \
 	    -nodes -newkey rsa -keyout ${@:R}.key -x509 -out $@
@@ -55,6 +55,7 @@ server.crt: ca.crt ${@:R}.req
 	    -in ${@:R}.req -out $@
 
 ${REGRESS_TARGETS:M*tls*}: server.crt
+${REGRESS_TARGETS:M*badca*}: badca.crt
 
 # make perl syntax check for all args files
 
