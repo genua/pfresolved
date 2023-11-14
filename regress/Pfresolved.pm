@@ -77,6 +77,7 @@ sub child {
 	my @cmd = (@sudo, @ktrace, $self->{execfile}, "-dvvv",
 	    "-f", $self->{conffile});
 	push @cmd, "-r", $resolver if $resolver;
+	push @cmd, "-m", $self->{min_ttl} if $self->{min_ttl};
 	if ($self->{tls}) {
 		my $ca = $self->{ca} || "ca.crt";
 		push @cmd, "-C", $ca if $self->{tls};

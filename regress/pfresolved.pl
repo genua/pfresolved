@@ -52,6 +52,7 @@ my $d = Pfresolved->new(
 );
 my $s = Pfctl->new(
     %{$args{pfctl}},
+    nsd			=> $n,
     pfresolved		=> $d,
 ) if $args{pfctl};
 

@@ -55,6 +55,12 @@ sub child {
 
 sub func {
 	my $self = shift;
+
+	$self->show();
+}
+
+sub show {
+	my $self = shift;
 	my @sudo = $ENV{SUDO} ? $ENV{SUDO} : ();
 
 	my @cmd = (@sudo, qw(/sbin/pfctl -t regress-pfresolved -T show));

@@ -34,7 +34,6 @@ sub new {
 	$args{ktraceexec} = $ENV{KTRACE} if $ENV{KTRACE};
 	$args{ktracefile} ||= "nsd.ktrace";
 	$args{logfile} ||= "nsd.log";
-	$args{serial} ||= time();
 	$args{up} ||= "nsd started";
 
 	my $self = Proc::new($class, %args);
@@ -68,6 +67,18 @@ sub new {
 	print $fh "	name: regress.\n";
 	print $fh "	zonefile: nsd.zone\n";
 
+	$self->zone();
+
+	return $self;
+}
+
+sub zone {
+	my $self = shift;
+	my %args = @_;
+	$args{serial} ||= time();
+	$self->{record_list} = $args{record_list} if $args{record_list};
+
+	my $test = basename($self->{testfile} || "");
 	open(my $fz, '>', "nsd.zone") or die ref($self),
 	    " zone file 'nsd.zone' create failed: $!";
 	print $fz "; test $test\n";
@@ -84,7 +95,9 @@ sub new {
 		print $fz "$r\n";
 	}
 
-	return $self;
+	kill('HUP', $self->{pid}) or die
+	    ref($self), " kill HUP child '$self->{pid}' failed: $!"
+	    if $args{sighup};
 }
 
 sub child {
