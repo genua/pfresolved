@@ -22,7 +22,7 @@ jobs:
             whoami
             env | sort
             echo == depend ==
-            sudo pkg_add libunbound
+            sudo pkg_add libunbound ldns-utils
             sudo useradd -m _pfresolved
             echo == build ==
             make all

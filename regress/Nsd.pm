@@ -65,7 +65,11 @@ sub new {
 	print $fh "zone:\n";
 	# libunbound does not process invalid domain
 	print $fh "	name: regress.\n";
-	print $fh "	zonefile: nsd.zone\n";
+	if ($self->{dnssec}) {
+		print $fh "	zonefile: nsd.zone.signed\n";
+	} else {
+		print $fh "	zonefile: nsd.zone\n";
+	}
 
 	$self->zone();
 
@@ -75,7 +79,7 @@ sub new {
 sub zone {
 	my $self = shift;
 	my %args = @_;
-	$args{serial} ||= time();
+	$args{serial} ||= $self->{serial} || time();
 	$self->{record_list} = $args{record_list} if $args{record_list};
 
 	my $test = basename($self->{testfile} || "");
@@ -93,6 +97,12 @@ sub zone {
 	print $fz "	)\n";
 	foreach my $r (@{$self->{record_list} || []}) {
 		print $fz "$r\n";
+	}
+
+	if ($self->{dnssec}) {
+		my @cmd = qw(/usr/local/bin/ldns-signzone -b nsd.zone zsk ksk);
+		system(@cmd) and die ref($self),
+		    "sign zone command '@cmd' failed: $?";
 	}
 
 	kill('HUP', $self->{pid}) or die
