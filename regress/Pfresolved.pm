@@ -78,6 +78,10 @@ sub child {
 	    "-f", $self->{conffile});
 	push @cmd, "-r", $resolver if $resolver;
 	push @cmd, "-m", $self->{min_ttl} if $self->{min_ttl};
+	if ($self->{dnssec_level}) {
+		push @cmd, "-A", "ksk.ds";
+		push @cmd, "-S", $self->{dnssec_level};
+	}
 	if ($self->{tls}) {
 		my $ca = $self->{ca} || "ca.crt";
 		push @cmd, "-C", $ca if $self->{tls};
