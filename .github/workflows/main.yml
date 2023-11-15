@@ -28,5 +28,5 @@ jobs:
             make all
             echo == test ==
             REGRESS_FAIL_EARLY=no SUDO=sudo make test 2>&1 | tee make.log
-            tail -n100 regress/pfresolved.log
+            tail -n1000 regress/*.log
             ! grep -B1 FAILED make.log
