@@ -24,10 +24,10 @@ our %args = (
     },
     pfresolved => {
 	dnssec_level => 3,
-	trust_anchor_file => "ksk.key",
+	trust_anchor_file => "regress-ksk.key",
 	address_list => [ map { "$_.regress." } qw(foo bar foobar) ],
 	loggrep => {
-	    qr/-A ksk.key/ => 1,
+	    qr/-A regress-ksk.key/ => 1,
 	    qr/result for .* secure: 1,/ => 6,
 	    qr{added: 192.0.2.1/32,} => 1,
 	    qr{added: 2001:db8::1/128,} => 1,

@@ -34,14 +34,24 @@ sub new {
 	$args{ktraceexec} = $ENV{KTRACE} if $ENV{KTRACE};
 	$args{ktracefile} ||= "nsd.ktrace";
 	$args{logfile} ||= "nsd.log";
+	$args{test} ||= basename($args{testfile} || "");
 	$args{up} ||= "nsd started";
 
 	my $self = Proc::new($class, %args);
 
-	my $test = basename($self->{testfile} || "");
+	$self->conf();
+	$self->root();
+	$self->zone();
+
+	return $self;
+}
+
+sub conf {
+	my $self = shift;
+
 	open(my $fh, '>', $self->{conffile}) or die ref($self),
 	    " config file '$self->{conffile}' create failed: $!";
-	print $fh "# test $test\n";
+	print $fh "# test $self->{test}\n";
 	print $fh "server:\n";
 	print $fh "	chroot: \"\"\n";
 	if ($self->{listen}{domain} && $self->{listen}{domain} == AF_INET) {
@@ -63,17 +73,57 @@ sub new {
 	print $fh "	verbosity: 3\n";
 	print $fh "	zonesdir: .\n";
 	print $fh "zone:\n";
+	# provide root zone for testing dnssec validation
+	print $fh "	name: .\n";
+	print $fh "	zonefile: root.zone.signed\n";
+	print $fh "zone:\n";
 	# libunbound does not process invalid domain
 	print $fh "	name: regress.\n";
-	if ($self->{dnssec}) {
-		print $fh "	zonefile: nsd.zone.signed\n";
-	} else {
-		print $fh "	zonefile: nsd.zone\n";
+	my $signed = $self->{dnssec} ? ".signed" : "";
+	print $fh "	zonefile: regress.zone$signed\n";
+}
+
+sub root {
+	my $self = shift;
+
+	my $serial = time();
+	open(my $fh, '>', "root.zone") or die ref($self),
+	    " zone file 'root.zone' create failed: $!";
+	print $fh "; test $self->{test}\n";
+	print $fh "\$ORIGIN	.\n";
+	print $fh "\$TTL	86400\n";
+	print $fh "\@	IN	SOA	localhost root.localhost (\n";
+	print $fh "		$serial	; serial number\n";
+	print $fh "		7200		; refresh\n";
+	print $fh "		600		; retry\n";
+	print $fh "		86400		; expire\n";
+	print $fh "		3600		; minimum TTL\n";
+	print $fh "	)\n";
+	print $fh "regress	IN	NS	localhost\n";
+	if ($self->{dnssec} || $self->{dnssec_delegation}) {
+	    # root zone contains delegation signer of regress zone
+	    open(my $ds, '<', "regress-ksk.ds") or die ref($self),
+		" open file 'regress-ksk.ds' failed: $!";
+	    print $fh (<$ds>);
 	}
+	{
+	    # every signed zone contains its own public keys
+	    open(my $kk, '<', "root-ksk.key") or die ref($self),
+		" open file 'root-ksk.key' failed: $!";
+	    print $fh (<$kk>);
+	    open(my $zk, '<', "root-zsk.key") or die ref($self),
+		" open file 'root-zsk.key' failed: $!";
+	    print $fh (<$zk>);
+	}
+	close($fh);
 
-	$self->zone();
-
-	return $self;
+	{
+	    # root zone is always signed
+	    my @cmd = qw(/usr/local/bin/ldns-signzone -b -n
+		root.zone root-zsk root-ksk);
+	    system(@cmd) and die ref($self),
+		"sign root zone command '@cmd' failed: $?";
+	}
 }
 
 sub zone {
@@ -82,33 +132,43 @@ sub zone {
 	$args{serial} ||= $self->{serial} || time();
 	$self->{record_list} = $args{record_list} if $args{record_list};
 
-	my $test = basename($self->{testfile} || "");
-	open(my $fz, '>', "nsd.zone") or die ref($self),
-	    " zone file 'nsd.zone' create failed: $!";
-	print $fz "; test $test\n";
-	print $fz "\$ORIGIN	regress.\n";
-	print $fz "\$TTL	86400\n";
-	print $fz "\@	IN	SOA	pfresolved root.pfresolved (\n";
-	print $fz "		$args{serial}	; serial number\n";
-	print $fz "		7200		; refresh\n";
-	print $fz "		600		; retry\n";
-	print $fz "		86400		; expire\n";
-	print $fz "		3600		; minimum TTL\n";
-	print $fz "	)\n";
+	open(my $fh, '>', "regress.zone") or die ref($self),
+	    " zone file 'regress.zone' create failed: $!";
+	print $fh "; test $self->{test}\n";
+	print $fh "\$ORIGIN	regress.\n";
+	print $fh "\$TTL	86400\n";
+	print $fh "\@	IN	SOA	localhost root.localhost (\n";
+	print $fh "		$args{serial}	; serial number\n";
+	print $fh "		7200		; refresh\n";
+	print $fh "		600		; retry\n";
+	print $fh "		86400		; expire\n";
+	print $fh "		3600		; minimum TTL\n";
+	print $fh "	)\n";
 	foreach my $r (@{$self->{record_list} || []}) {
-		print $fz "$r\n";
+		print $fh "$r\n";
 	}
-	close($fz);
+	if ($self->{dnssec} || $self->{dnssec_key}) {
+	    # every signed zone contains its own public keys
+	    open(my $kk, '<', "regress-ksk.key") or die ref($self),
+		" open file 'regress-ksk.key' failed: $!";
+	    print $fh (<$kk>);
+	    open(my $zk, '<', "regress-zsk.key") or die ref($self),
+		" open file 'regress-zsk.key' failed: $!";
+	    print $fh (<$zk>);
+	}
+	close($fh);
 
 	if ($self->{dnssec}) {
-		my @cmd = qw(/usr/local/bin/ldns-signzone -b nsd.zone zsk ksk);
+		my @cmd = qw(/usr/local/bin/ldns-signzone -b -n
+		    regress.zone regress-zsk regress-ksk);
 		system(@cmd) and die ref($self),
-		    "sign zone command '@cmd' failed: $?";
+		    "sign regress zone command '@cmd' failed: $?";
 	}
 
-	kill('HUP', $self->{pid}) or die
-	    ref($self), " kill HUP child '$self->{pid}' failed: $!"
-	    if $args{sighup};
+	if ($args{sighup}) {
+		kill('HUP', $self->{pid}) or die
+		    ref($self), " kill HUP child '$self->{pid}' failed: $!";
+	}
 }
 
 sub child {

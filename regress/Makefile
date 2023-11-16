@@ -10,7 +10,8 @@ PERLS =			Nsd.pm Pfctl.pm Pfresolved.pm Proc.pm \
 			funcs.pl pfresolved.pl
 ARGS !=			cd ${.CURDIR} && ls args-*.pl
 REGRESS_TARGETS =       ${ARGS:S/^/run-/}
-CLEANFILES =		*.log *.conf ktrace.out stamp-* *.pid *.ktrace *.zone
+CLEANFILES =		*.log *.ktrace ktrace.out stamp-* \
+			*.conf *.pid *.zone *.zone.signed
 
 REGRESS_SETUP_ONCE =	chmod-obj
 chmod-obj:
@@ -62,21 +63,22 @@ ${REGRESS_TARGETS:M*tls-bad*}: badca.crt
 
 CLEANFILES +=	*.key *.private *.ds .key .private .ds
 
-zsk.key:
+root-zsk.key regress-zsk.key:
 	rm -f ${@:R}.*
-	ldns-keygen -a ED25519 -sf regress
+	ldns-keygen -a ED25519 -sf ${@:C/-.*//:S/root/./}
 	mv .key ${@:R}.key
 	mv .private ${@:R}.private
 
-ksk.key badksk.key:
+root-ksk.key regress-ksk.key regress-badksk.key:
 	rm -f ${@:R}.*
-	ldns-keygen -a ED25519 -k -sf regress
+	ldns-keygen -a ED25519 -k -sf ${@:C/-.*//:S/root/./}
 	mv .key ${@:R}.key
 	mv .private ${@:R}.private
 	mv .ds ${@:R}.ds
 
-${REGRESS_TARGETS:M*dnssec*}: zsk.key ksk.key
-${REGRESS_TARGETS:M*dnssec-bad*}: badksk.key
+${REGRESS_TARGETS:M*dnssec*}: regress-zsk.key regress-ksk.key
+${REGRESS_TARGETS:M*dnssec-bad*}: regress-badksk.key
+${REGRESS_TARGETS}: root-ksk.key root-zsk.key
 
 # make perl syntax check for all args files
 
