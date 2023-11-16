@@ -81,7 +81,7 @@ sub child {
 	push @cmd, "-A", $self->{trust_anchor_file}
 	    if $self->{trust_anchor_file};
 	if ($self->{dnssec_level}) {
-		push @cmd, "-A", "ksk.ds"
+		push @cmd, "-A", "root-ksk.ds"
 		    unless $self->{trust_anchor_file};
 		push @cmd, "-S", $self->{dnssec_level};
 	}

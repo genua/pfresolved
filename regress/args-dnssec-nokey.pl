@@ -1,20 +1,21 @@
-# Test DNSSEC with bad trust anchor.
+# Test DNSSEC with unsigned zone without dnskey below root.
 
-# Create signed zone file with A and AAAA records in zone regress.
+# Create signed root zone with delegation signer for regress.
+# Create zone file without dnskey with A and AAAA records in zone regress.
 # Start nsd with unsigned zone file listening on 127.0.0.1.
 # Write hosts of regress zone into pfresolved config.
-# Start pfresolved with nsd as resolver with bad trust anchor.
+# Start pfresolved with nsd as resolver, dnssec level 2, and trust anchor root.
 # Wait until pfresolved is starting new resolve request after failure.
 # Read IP addresses from pf table with pfctl.
 # Check that pf table contains neither IPv4 nor IPv6 addresses.
-# Check that pfresolved logged "validation failure" and "no keys have a DS".
+# Check that pfresolved logged "validation failure" and "No DNSKEY record".
 
 use strict;
 use warnings;
 
 our %args = (
     nsd => {
-	dnssec => 1,
+	dnssec_delegation => 1,
 	record_list => [
 	    "foo	IN	A	192.0.2.1",
 	    "bar	IN	AAAA	2001:DB8::1",
@@ -24,11 +25,9 @@ our %args = (
     },
     pfresolved => {
 	dnssec_level => 2,
-	trust_anchor_file => "regress-badksk.ds",
 	address_list => [ map { "$_.regress." } qw(foo bar foobar) ],
 	loggrep => {
-	    qr/-A regress-badksk.ds/ => 1,
-	    qr/result for .*: validation failure .* no keys have a DS/ => 6,
+	    qr/result for .*: validation failure .* No DNSKEY record/ => 6
 	},
     },
     pfctl => {
