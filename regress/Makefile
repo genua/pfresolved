@@ -55,24 +55,27 @@ server.crt: ca.crt ${@:R}.req
 	    -in ${@:R}.req -out $@
 
 ${REGRESS_TARGETS:M*tls*}: server.crt
-${REGRESS_TARGETS:M*badca*}: badca.crt
+${REGRESS_TARGETS:M*tls-bad*}: badca.crt
 
 # create zone and key signing keys for DNSSEC
 
 CLEANFILES +=	*.key *.private *.ds .key .private .ds
 
 zsk.key:
+	rm -f ${@:R}.*
 	ldns-keygen -a ED25519 -sf regress
-	mv .key zsk.key
-	mv .private zsk.private
+	mv .key ${@:R}.key
+	mv .private ${@:R}.private
 
-ksk.key:
+ksk.key badksk.key:
+	rm -f ${@:R}.*
 	ldns-keygen -a ED25519 -k -sf regress
-	mv .key ksk.key
-	mv .private ksk.private
-	mv .ds ksk.ds
+	mv .key ${@:R}.key
+	mv .private ${@:R}.private
+	mv .ds ${@:R}.ds
 
 ${REGRESS_TARGETS:M*dnssec*}: zsk.key ksk.key
+${REGRESS_TARGETS:M*dnssec-bad*}: badksk.key
 
 # make perl syntax check for all args files
 
