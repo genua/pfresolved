@@ -78,8 +78,11 @@ sub child {
 	    "-f", $self->{conffile});
 	push @cmd, "-r", $resolver if $resolver;
 	push @cmd, "-m", $self->{min_ttl} if $self->{min_ttl};
+	push @cmd, "-A", $self->{trust_anchor_file}
+	    if $self->{trust_anchor_file};
 	if ($self->{dnssec_level}) {
-		push @cmd, "-A", "ksk.ds";
+		push @cmd, "-A", "ksk.ds"
+		    unless $self->{trust_anchor_file};
 		push @cmd, "-S", $self->{dnssec_level};
 	}
 	if ($self->{tls}) {
