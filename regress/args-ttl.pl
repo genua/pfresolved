@@ -62,8 +62,9 @@ our %args = (
 		sighup => 1,
 	    );
 
-	    # wait until TTL has expired, pfresolvd delays another second
-	    my $timeout = 3;
+	    # wait until TTL 2 has expired, pfresolvd delays another second,
+	    # waiting another 2 seconds is against a race in the test
+	    my $timeout = 5;
 	    my ($updates, $deleted) = (2, 1);
 	    my $table =
 		qr/updated addresses for pf table .*, deleted: $deleted,/;
