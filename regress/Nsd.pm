@@ -98,6 +98,7 @@ sub zone {
 	foreach my $r (@{$self->{record_list} || []}) {
 		print $fz "$r\n";
 	}
+	close($fz);
 
 	if ($self->{dnssec}) {
 		my @cmd = qw(/usr/local/bin/ldns-signzone -b nsd.zone zsk ksk);
