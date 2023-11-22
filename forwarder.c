@@ -49,6 +49,7 @@ void
 forwarderproc(struct privsep *ps, struct privsep_proc *p)
 {
 	struct pfresolved	*env = ps->ps_env;
+	int			 res;
 
 	forwarder_ub_ctx_init(env);
 
@@ -58,8 +59,11 @@ forwarderproc(struct privsep *ps, struct privsep_proc *p)
 	 * call chroot(2). Therefore we simply query for "localhost" here and
 	 * then discard the result.
 	 */
-	ub_resolve_async(env->sc_ub_ctx, "localhost", DNS_RR_TYPE_A,
+	res = ub_resolve_async(env->sc_ub_ctx, "localhost", DNS_RR_TYPE_A,
 	    DNS_CLASS_IN, NULL, forwarder_ub_resolve_async_cb_discard, NULL);
+	if (res != 0)
+		fatalx("%s: error when initializing libunbound: %s", __func__,
+		    ub_strerror(res));
 
 	proc_run(ps, p, procs, nitems(procs), forwarder_run, NULL);
 }
