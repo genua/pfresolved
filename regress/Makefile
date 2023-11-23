@@ -6,7 +6,8 @@ PFRESOLVED ?=		${.CURDIR}/../${.OBJDIR:T}/pfresolved
 PFRESOLVED ?=		${.CURDIR}/../pfresolved
 .endif
 
-PERLS =			Proc.pm Pfresolved.pm funcs.pl pfresolved.pl
+PERLS =			Nsd.pm Pfctl.pm Pfresolved.pm Proc.pm \
+			funcs.pl pfresolved.pl
 ARGS !=			cd ${.CURDIR} && ls args-*.pl
 REGRESS_TARGETS =       ${ARGS:S/^/run-/}
 CLEANFILES =		*.log *.conf ktrace.out stamp-* *.pid *.ktrace *.zone
