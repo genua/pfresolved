@@ -59,8 +59,8 @@ our %args = (
 		    "foobar		A	192.0.2.20",
 		    "foobar		AAAA	2001:DB8::20",
 		],
-		sighup => 1,
 	    );
+	    $nsd->sighup();
 
 	    # wait until TTL 2 has expired, pfresolvd delays another second,
 	    # waiting another 2 seconds is against a race in the test
