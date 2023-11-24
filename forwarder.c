@@ -129,11 +129,15 @@ forwarder_process_resolvereq(struct pfresolved *env, struct imsg *imsg)
 	len = IMSG_DATA_SIZE(imsg);
 
 	if (len < sizeof(af))
-		fatalx("%s: imsg length too small", __func__);
+		fatalx("%s: imsg length too small for af: len %zu, required %lu",
+		    __func__, len, sizeof(af));
 
 	memcpy(&af, ptr, sizeof(af));
 	ptr += sizeof(af);
 	len -= sizeof(af);
+
+	if (len <= 0 || len > HOST_NAME_MAX)
+		fatalx("%s: invalid length for hostname: %zu", __func__, len);
 
 	if ((hostname = calloc(len + 1, sizeof(char))) == NULL)
 		fatal("%s: calloc", __func__);
