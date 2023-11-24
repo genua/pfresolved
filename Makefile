@@ -18,7 +18,7 @@ CFLAGS+=	-Wsign-compare
 
 LDFLAGS+=	-L/usr/local/lib
 
-VERSION=	1.00
+VERSION=	1.01
 CLEANFILES=	pfresolved-${VERSION}.tar.gz*
 REGRESSFILES!=	make -C ${.CURDIR}/regress -V PERLS -V ARGS
 
