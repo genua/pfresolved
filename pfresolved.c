@@ -514,21 +514,28 @@ parent_get_resolve_result_data(struct pfresolved *env, struct imsg *imsg,
 	len = IMSG_DATA_SIZE(imsg);
 
 	if (len < sizeof(*af))
-		fatalx("%s: imsg length too small", __func__);
+		fatalx("%s: imsg length too small for af: len %zu, required %lu",
+		    __func__, len, sizeof(*af));
 
 	memcpy(af, ptr, sizeof(*af));
 	ptr += sizeof(*af);
 	len -= sizeof(*af);
 
 	if (len < sizeof(hostname_len))
-		fatalx("%s: imsg length too small", __func__);
+		fatalx("%s: imsg length too small for hostname_len: "
+		    "len %zu, required %lu", __func__, len, sizeof(hostname_len));
 
 	memcpy(&hostname_len, ptr, sizeof(hostname_len));
 	ptr += sizeof(hostname_len);
 	len -= sizeof(hostname_len);
 
-	if (hostname_len < 0 || len < (size_t)hostname_len)
-		fatalx("%s: imsg length too small", __func__);
+	if (hostname_len <= 0 || hostname_len > HOST_NAME_MAX)
+		fatalx("%s: invalid length for hostname: %d", __func__,
+		    hostname_len);
+
+	if (len < (size_t)hostname_len)
+		fatalx("%s: imsg length too small for hostname: "
+		    "len %zu, required %d", __func__, len, hostname_len);
 
 	memcpy(search_key.pfh_hostname, ptr, hostname_len);
 	ptr += hostname_len;
@@ -545,7 +552,8 @@ parent_get_resolve_result_data(struct pfresolved *env, struct imsg *imsg,
 		return (host);
 
 	if (len < sizeof(*ttl))
-		fatalx("%s: imsg length too small", __func__);
+		fatalx("%s: imsg length too small for ttl: len %zu, "
+		    "required %lu", __func__, len, sizeof(*ttl));
 
 	memcpy(ttl, ptr, sizeof(*ttl));
 	ptr += sizeof(*ttl);
@@ -555,14 +563,17 @@ parent_get_resolve_result_data(struct pfresolved *env, struct imsg *imsg,
 		return (host);
 
 	if (len < sizeof(*num_addresses))
-		fatalx("%s: imsg length too small", __func__);
+		fatalx("%s: imsg length too small for num_addresses: len %zu, "
+		    "required %lu", __func__, len, sizeof(*num_addresses));
 
 	memcpy(num_addresses, ptr, sizeof(*num_addresses));
 	ptr += sizeof(*num_addresses);
 	len -= sizeof(*num_addresses);
 
 	if (len != *num_addresses * sizeof(**addresses))
-		fatalx("%s: bad length imsg", __func__);
+		fatalx("%s: remaining imsg length does not match expected "
+		    "length for addresses: len %zu, expected %lu", __func__, len,
+		    *num_addresses * sizeof(**addresses));
 
 	if ((*addresses = calloc(*num_addresses, sizeof(**addresses))) == NULL)
 		fatal("%s: calloc", __func__);
