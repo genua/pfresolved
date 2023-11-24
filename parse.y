@@ -782,6 +782,11 @@ add_host(struct pfresolved_table *table, const char *value)
 	struct pfresolved_host		*host, *old_host;
 	struct pfresolved_table_ref	*ref, *old_ref;
 
+	if (strlen(value) == 0) {
+		yyerror("hostname is empty");
+		return (-1);
+	}
+
 	if ((host = calloc(1, sizeof(*host))) == NULL)
 		fatal("%s: calloc", __func__);
 
