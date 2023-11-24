@@ -20,6 +20,7 @@ use warnings;
 package Nsd;
 use parent 'Proc';
 use Carp;
+use Errno;
 use File::Basename;
 use Socket;
 use Sys::Hostname;
@@ -164,11 +165,22 @@ sub zone {
 		system(@cmd) and die ref($self),
 		    "sign regress zone command '@cmd' failed: $?";
 	}
+}
 
-	if ($args{sighup}) {
-		kill('HUP', $self->{pid}) or die
-		    ref($self), " kill HUP child '$self->{pid}' failed: $!";
-	}
+sub sighup {
+	my $self = shift;
+
+	kill(HUP => $self->{pid})
+	    and return;
+
+	my @sudo = split(' ', $ENV{SUDO});
+	@sudo && $!{EPERM}
+	    or die ref($self), " kill HUP child '$self->{pid}' failed: $!";
+
+	# sudo is enabled and kill failed with operation not permitted
+	my @cmd = (@sudo, '/bin/kill', '-HUP', $self->{pid});
+	system(@cmd)
+	    and die ref($self), " command '@cmd' failed: $?";
 }
 
 sub child {
