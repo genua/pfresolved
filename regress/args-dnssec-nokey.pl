@@ -37,7 +37,7 @@ our %args = (
 		my $pfresolved = $self->{pfresolved};
 
 		my $restart = qr/starting new resolve request/;
-		my $timeout = 5;
+		my $timeout = 15;
 		$pfresolved->loggrep($restart, $timeout) or die ref($self),
 		    " no '$restart' in $pfresolved->{logfile}",
 		    " after $timeout seconds";

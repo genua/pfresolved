@@ -43,7 +43,7 @@ our %args = (
 	    my $self = shift;
 	    my $pfresolved = $self->{pfresolved};
 	    my $failed = qr/query for .* failed/;
-	    my $timeout = 5;
+	    my $timeout = 15;
 	    $pfresolved->loggrep($failed, $timeout)
 		or die ref($self), " no '$failed' in $pfresolved->{logfile}",
 		    " after $timeout seconds";

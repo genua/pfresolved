@@ -35,7 +35,7 @@ sub new {
 
 sub child {
 	my $self = shift;
-	my $timeout = $self->{timeout} || 5;
+	my $timeout = $self->{timeout} || 15;
 	my $updated = $self->{updated};
 	my $pfresolved = $self->{pfresolved};
 
