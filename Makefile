@@ -3,7 +3,7 @@ SRCS=		pfresolved.c
 SRCS+=		forwarder.c log.c pftable.c proc.c timer.c util.c
 SRCS+=		parse.y
 MAN=		pfresolved.8 pfresolved.conf.5
-BINDIR?=	/usr/local/bin
+BINDIR?=	/usr/local/sbin
 MANDIR?=	/usr/local/man/man
 
 LDADD+=		-lutil -levent -lexecinfo -lunbound
