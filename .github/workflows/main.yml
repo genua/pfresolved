@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: OpenBSD Virtual Machine
-        uses: cross-platform-actions/action@v0.21.0
+        uses: cross-platform-actions/action@v0.21.1
         with:
           operating_system: openbsd
           version: '7.4'
