@@ -34,7 +34,8 @@ PERLPATH =	${.CURDIR}/
 
 .for a in ${ARGS}
 run-$a: $a
-	time SUDO=${SUDO} KTRACE=${KTRACE} PFRESOLVED=${PFRESOLVED} \
+	time SUDO=${SUDO} MALLOC_OPTIONS=${MALLOC_OPTIONS} KTRACE=${KTRACE} \
+	    PFRESOLVED=${PFRESOLVED} \
 	    perl ${PERLINC} ${PERLPATH}pfresolved.pl ${PERLPATH}$a
 .endfor
 
