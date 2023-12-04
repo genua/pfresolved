@@ -66,6 +66,11 @@ sub child {
 	}
 	print STDERR "pfresolved not running\n";
 
+	my @env;
+	if ($ENV{MALLOC_OPTIONS}) {
+		@env = "env" if $ENV{SUDO};
+		push @env, "MALLOC_OPTIONS=$ENV{MALLOC_OPTIONS}";
+	}
 	my @ktrace;
 	@ktrace = ($self->{ktraceexec}, "-i", "-f", $self->{ktracefile})
 	    if $self->{ktraceexec};
@@ -74,7 +79,7 @@ sub child {
 	$resolver .= '@'.$self->{port} if $self->{port};
 	my $hostname = $self->{hostname} || "localhost";
 	$resolver .= "#$hostname" if $self->{tls};
-	my @cmd = (@sudo, @ktrace, $self->{execfile}, "-dvvv",
+	my @cmd = (@sudo, @env, @ktrace, $self->{execfile}, "-dvvv",
 	    "-f", $self->{conffile});
 	push @cmd, "-r", $resolver if $resolver;
 	push @cmd, "-m", $self->{min_ttl} if $self->{min_ttl};
