@@ -833,6 +833,7 @@ table_lookup_or_create(const char *table_name)
 	if (strlcpy(table->pft_name, table_name, sizeof(table->pft_name))
 	    >= sizeof(table->pft_name)) {
 		yyerror("table name is too long");
+		free(table);
 		return (NULL);
 	}
 
