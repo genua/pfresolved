@@ -181,6 +181,7 @@ struct pfresolved_address {
 struct pfresolved_table_entry {
 	struct pfresolved_address		 pfte_addr;
 	int					 pfte_static;
+	int					 pfte_negate;
 	int					 pfte_refcount;
 	RB_ENTRY(pfresolved_table_entry)	 pfte_node;
 };
