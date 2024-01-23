@@ -85,7 +85,7 @@ static struct pfresolved_table	*cur_table = NULL;
 int				 add_table_value(struct pfresolved_table *,
 				     const char *);
 int				 add_static_address(struct pfresolved_table *,
-				     const char *);
+				     const char *, int);
 int				 add_host(struct pfresolved_table *,
 				     const char *);
 struct pfresolved_table		*table_lookup_or_create(const char *);
@@ -165,6 +165,15 @@ table_values	: /* empty */
 				YYERROR;
 			}
 			free($2);
+		}
+		| table_values '!' table_value optcomma optnl
+		{
+			if (add_static_address(cur_table, $3, 1) == -1) {
+				yyerror("add_static_address failed");
+				free($3);
+				YYERROR;
+			}
+			free($3);
 		}
 		;
 
@@ -728,7 +737,7 @@ add_table_value(struct pfresolved_table *table, const char *value)
 	if (!table)
 		return (-1);
 
-	if (add_static_address(table, value) == -1 &&
+	if (add_static_address(table, value, 0) == -1 &&
 	    add_host(table, value) == -1)
 		return (-1);
 
@@ -736,7 +745,7 @@ add_table_value(struct pfresolved_table *table, const char *value)
 }
 
 int
-add_static_address(struct pfresolved_table *table, const char *value)
+add_static_address(struct pfresolved_table *table, const char *value, int negate)
 {
 	struct pfresolved_table_entry	*entry, *old;
 	struct in_addr			 in4;
@@ -750,12 +759,22 @@ add_static_address(struct pfresolved_table *table, const char *value)
 		fatal("%s: calloc", __func__);
 
 	if ((bits = inet_net_pton(AF_INET, value, &in4, sizeof(in4))) != -1) {
+		if (negate && bits != 32) {
+			yyerror("negation is not allowed for networks");
+			free(entry);
+			return (-1);
+		}
 		applymask4(&in4, bits);
 		entry->pfte_addr.pfa_af = AF_INET;
 		entry->pfte_addr.pfa_addr.in4 = in4;
 		entry->pfte_addr.pfa_prefixlen = bits;
 	} else if ((bits = inet_net_pton(AF_INET6, value, &in6,
 	    sizeof(in6))) != -1) {
+		if (negate && bits != 128) {
+			yyerror("negation is not allowed for networks");
+			free(entry);
+			return (-1);
+		}
 		applymask6(&in6, bits);
 		entry->pfte_addr.pfa_af = AF_INET6;
 		entry->pfte_addr.pfa_addr.in6 = in6;
@@ -766,12 +785,19 @@ add_static_address(struct pfresolved_table *table, const char *value)
 	}
 
 	entry->pfte_static = 1;
+	entry->pfte_negate = negate;
 
 	old = RB_INSERT(pfresolved_table_entries, &table->pft_entries, entry);
 	if (old) {
 		free(entry);
-		log_warn("duplicate entry in config: %s %s", table->pft_name,
-		    value);
+		if (old->pfte_negate != negate) {
+			yyerror("the same address cannot be specified in normal"
+			    " and negated form");
+			return (-1);
+		} else {
+			log_warn("duplicate entry in config: %s %s",
+			    table->pft_name, value);
+		}
 	}
 	return (0);
 }

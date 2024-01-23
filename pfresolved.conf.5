@@ -86,9 +86,12 @@ it will be created by
 A list of hostnames that should be resolved by
 .Xr pfresolved 8
 for the specified table.
-The list can also contain IP addresses.
+The list can also contain IP addresses and networks.
 These will be directly added to the table when the configuration
 file is loaded.
+IP addresses can also be negated by prefixing them with the
+.Cm !\&
+operator.
 Entries in the list may be separated by comma or newline.
 .El
 .Sh EXAMPLES
@@ -99,6 +102,7 @@ myTable2 {
 	example.net
 	example.org
 	198.51.100.0
+	! 198.51.100.1
 	include "/list/with/hosts"
 }
 .Ed

@@ -51,6 +51,7 @@ pftable_set_addresses(struct pfresolved *env, struct pfresolved_table *table)
 			buffer[count].pfra_ip6addr = entry->pfte_addr.pfa_addr.in6;
 		}
 		buffer[count].pfra_net = entry->pfte_addr.pfa_prefixlen;
+		buffer[count].pfra_not = entry->pfte_negate;
 		count++;
 	}
 
