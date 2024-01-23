@@ -146,9 +146,11 @@ sub loggrep {
 	my $end;
 	$end = time() + $timeout if $timeout;
 
+	my $expected_status = $self->{expected_status} || 0;
+
 	do {
 		my($kid, $status, $code) = $self->wait(WNOHANG);
-		if ($kid > 0 && $status != 0) {
+		if ($kid > 0 && $status != $expected_status << 8) {
 			# child terminated with failure
 			die ref($self), " child status: $status $code";
 		}
