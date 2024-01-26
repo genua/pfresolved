@@ -1,5 +1,7 @@
 Revision history for pfresolved pf table DNS update daemon
 
+1.02
+
 1.01 2024-01-26
   * Add support for negated addresses.
 
