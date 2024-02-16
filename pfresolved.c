@@ -327,8 +327,17 @@ parent_configure(struct pfresolved *env)
 		fatal("opening pf device failed");
 	}
 
-	if (pledge("stdio pf rpath wpath cpath", NULL) == -1)
-		fatal("%s: pledge", __func__);
+	if (env->sc_hints_file) {
+		if (unveil(env->sc_hints_file, "wc") == -1)
+			fatal("%s: unveil %s", __func__, env->sc_hints_file);
+		if (unveil("/", "r") == -1)
+			fatal("%s: unveil /", __func__);
+		if (pledge("stdio pf rpath wpath cpath", NULL) == -1)
+			fatal("%s: pledge", __func__);
+	} else {
+		if (pledge("stdio pf rpath", NULL) == -1)
+			fatal("%s: pledge", __func__);
+	}
 
 	if (parent_init_pftables(env) == -1)
 		fatalx("%s: failed to init pf tables", __func__);
