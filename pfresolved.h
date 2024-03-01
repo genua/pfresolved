@@ -15,6 +15,7 @@
 
 #define PFRESOLVED_USER "_pfresolved"
 #define PFRESOLVED_CONFIG "/etc/pfresolved.conf"
+#define PFRESOLVED_SOCKET "/var/run/pfresolved.sock"
 #define PF_DEVICE_PATH "/dev/pf"
 
 #define MIN_TTL_DEFAULT 10
@@ -50,6 +51,8 @@ struct imsgev {
 enum imsg_type {
 	IMSG_NONE,
 	IMSG_CTL_VERBOSE,
+	IMSG_CTL_RELOAD,
+	IMSG_CTL_HINTS,
 	IMSG_CTL_PROCFD,
 	IMSG_RESOLVEREQ,
 	IMSG_RESOLVEREQ_SUCCESS,
@@ -59,8 +62,27 @@ enum imsg_type {
 enum privsep_procid {
 	PROC_PARENT = 0,
 	PROC_FORWARDER,
+	PROC_CONTROL,
 	PROC_MAX
 };
+
+struct control_sock {
+	const char	*cs_name;
+	struct event	 cs_ev;
+	struct event	 cs_evt;
+	int		 cs_fd;
+	int		 cs_restricted;
+	void		*cs_env;
+};
+
+struct ctl_conn {
+	TAILQ_ENTRY(ctl_conn)	 entry;
+	uint8_t			 flags;
+#define CTL_CONN_NOTIFY		 0x01
+	struct imsgev		 iev;
+	uint32_t		 peerid;
+};
+TAILQ_HEAD(ctl_connlist, ctl_conn);
 
 struct privsep_pipes {
 	int				*pp_pipes[PROC_MAX];
@@ -76,9 +98,7 @@ struct privsep {
 	struct passwd			*ps_pw;
 	int				 ps_noaction;
 
-	/* XXX: no control socket for now */
-	/*struct control_sock		 ps_csock;
-	struct control_socks		 ps_rcsocks;*/
+	struct control_sock		 ps_csock;
 
 	unsigned int			 ps_instances[PROC_MAX];
 	unsigned int			 ps_ninstances;
@@ -244,6 +264,11 @@ extern struct pfresolved	*pfresolved_env;
 
 /* forwarder.c */
 void	 forwarderproc(struct privsep *, struct privsep_proc *);
+
+/* control.c */
+void	 control(struct privsep *, struct privsep_proc *);
+int	 control_init(struct privsep *, struct control_sock *);
+int	 control_listen(struct control_sock *);
 
 /* pftable.c */
 int	 pftable_set_addresses(struct pfresolved *, struct pfresolved_table *);

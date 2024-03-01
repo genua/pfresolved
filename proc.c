@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 genua GmbH
+ * Copyright (c) 2024 genua GmbH
  * Copyright (c) 2010 - 2016 Reyk Floeter <reyk@openbsd.org>
  * Copyright (c) 2008 Pierre-Yves Ritschard <pyr@openbsd.org>
  *
@@ -649,8 +649,6 @@ proc_run(struct privsep *ps, struct privsep_proc *p,
 {
 	struct passwd		*pw;
 	const char		*root;
-        /* XXX: no control socket for now */
-	/*struct control_sock	*rcs;*/
 #ifdef GENUOS
 	struct			 sigaction sa;
 #endif
@@ -660,14 +658,10 @@ proc_run(struct privsep *ps, struct privsep_proc *p,
 	/* Set the process group of the current process */
 	setpgid(0, 0);
 
-        /* XXX: no control socket for now */
-	/*if (p->p_id == PROC_CONTROL && ps->ps_instance == 0) {
+	if (p->p_id == PROC_CONTROL && ps->ps_instance == 0) {
 		if (control_init(ps, &ps->ps_csock) == -1)
 			fatalx("%s: control_init", __func__);
-		TAILQ_FOREACH(rcs, &ps->ps_rcsocks, cs_entry)
-			if (control_init(ps, rcs) == -1)
-				fatalx("%s: control_init", __func__);
-	}*/
+	}
 
 	/* Use non-standard user */
 	if (p->p_pw != NULL)
@@ -724,14 +718,10 @@ proc_run(struct privsep *ps, struct privsep_proc *p,
 
 	proc_setup(ps, procs, nproc);
 	proc_accept(ps, PROC_PARENT_SOCK_FILENO, PROC_PARENT, 0);
-        /* XXX: no control socket for now */
-	/*if (p->p_id == PROC_CONTROL && ps->ps_instance == 0) {
+	if (p->p_id == PROC_CONTROL && ps->ps_instance == 0) {
 		if (control_listen(&ps->ps_csock) == -1)
 			fatalx("%s: control_listen", __func__);
-		TAILQ_FOREACH(rcs, &ps->ps_rcsocks, cs_entry)
-			if (control_listen(rcs) == -1)
-				fatalx("%s: control_listen", __func__);
-	}*/
+	}
 
 #if DEBUG
 	log_debug("%s: %s %d/%d, pid %d", __func__, p->p_title,

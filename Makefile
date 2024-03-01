@@ -1,6 +1,8 @@
+SUBDIR+=pfresolvectl
+
 PROG=		pfresolved
 SRCS=		pfresolved.c
-SRCS+=		forwarder.c log.c pftable.c proc.c timer.c util.c
+SRCS+=		forwarder.c log.c pftable.c proc.c timer.c util.c control.c
 SRCS+=		parse.y
 MAN=		pfresolved.8 pfresolved.conf.5
 BINDIR?=	/usr/local/sbin
@@ -21,6 +23,7 @@ LDFLAGS+=	-L/usr/local/lib
 VERSION=	1.02
 CLEANFILES=	pfresolved-${VERSION}.tar.gz*
 REGRESSFILES!=	make -C ${.CURDIR}/regress -V PERLS -V ARGS
+CTLFILES!=	make -C ${.CURDIR}/pfresolvectl -V CTLFILES
 
 .PHONY: dist pfresolved-${VERSION}.tar.gz
 dist: pfresolved-${VERSION}.tar.gz
@@ -36,6 +39,10 @@ pfresolved-${VERSION}.tar.gz:
 	mkdir pfresolved-${VERSION}/regress
 .for f in Makefile ${REGRESSFILES}
 	cp ${.CURDIR}/regress/$f pfresolved-${VERSION}/regress/
+.endfor
+	mkdir pfresolved-${VERSION}/pfresolvectl
+.for f in ${CTLFILES}
+	cp ${.CURDIR}/pfresolvectl/$f pfresolved-${VERSION}/pfresolvectl/
 .endfor
 	tar -czvf $@ pfresolved-${VERSION}
 	rm -rf pfresolved-${VERSION}

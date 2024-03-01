@@ -1,6 +1,6 @@
 .\"	$OpenBSD$
 .\"
-.\" Copyright (c) 2023 genua GmbH <bluhm@genua.de>
+.\" Copyright (c) 2024 genua GmbH <bluhm@genua.de>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -32,6 +32,7 @@
 .Op Fl m Ar seconds
 .Op Fl r Ar resolver
 .Op Fl S Ar dnssec_level
+.Op Fl s Ar socket
 .Sh DESCRIPTION
 .Nm pfresolved
 is a daemon which resolves hostnames using DNS and updates
@@ -119,6 +120,10 @@ Results from zones that are not signed with DNSSEC are still allowed.
 DNSSEC is enabled and required for every zone.
 Unsigned query results will be discarded.
 .El
+.It Fl s Ar socket
+The control socket to use.
+Default is
+.Pa /var/run/pfresolved.sock .
 .It Fl T
 Enable DNS-over-TLS.
 The system certificates will be automatically included and used for
