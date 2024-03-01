@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 genua GmbH
+ * Copyright (c) 2024 genua GmbH
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -74,7 +74,7 @@ forwarder_run(struct privsep *ps, struct privsep_proc *p, void *arg)
 	struct pfresolved	*env = ps->ps_env;
 	int			 fd;
 
-	if (pledge("stdio dns inet rpath", NULL) == -1)
+	if (pledge("stdio dns inet rpath recvfd", NULL) == -1)
 		fatal("%s: pledge", __func__);
 
 	if ((fd = ub_fd(env->sc_ub_ctx)) == -1)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 genua GmbH
+ * Copyright (c) 2024 genua GmbH
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -31,6 +31,7 @@ __dead void usage(void);
 void	 parent_shutdown(struct pfresolved *);
 void	 parent_sig_handler(int, short, void *);
 int	 parent_dispatch_forwarder(int, struct privsep_proc *, struct imsg *);
+int	 parent_dispatch_control(int, struct privsep_proc *, struct imsg *);
 void	 parent_configure(struct pfresolved *);
 void	 parent_reload(struct pfresolved *);
 void	 parent_start_resolve_timeouts(struct pfresolved *);
@@ -65,7 +66,8 @@ void	 parent_write_hints_file(struct pfresolved *);
 struct pfresolved	*pfresolved_env;
 
 static struct privsep_proc procs[] = {
-	{ "forwarder", PROC_FORWARDER, parent_dispatch_forwarder, forwarderproc }
+	{ "forwarder", PROC_FORWARDER, parent_dispatch_forwarder, forwarderproc },
+	{ "control", PROC_CONTROL, parent_dispatch_control, control }
 };
 
 __dead void
@@ -73,10 +75,10 @@ usage(void)
 {
 	extern char *__progname;
 
-	fprintf(stderr, "usage: %s [-dnTv] [-f file] [-r resolver] "
-	    "[-C cert_bundle_file] [-S dnssec_level] [-A trust_anchor_file] "
-	    "[-i outbound_ip] [-h hints_file] [-m seconds] [-M seconds]\n",
-	    __progname);
+	fprintf(stderr, "usage: %s [-dnTv] [-A trust_anchor_file] "
+	    "[-C cert_bundle_file] [-f file] [-h hints_file] [-i outbound_ip] "
+	    "[-M seconds] [-m seconds] [-r resolver] [-S dnssec_level] "
+	    "[-s socket]", __progname);
 	exit(1);
 }
 
@@ -90,6 +92,7 @@ main(int argc, char **argv)
 	int			 max_ttl = MAX_TTL_DEFAULT;
 	int			 num_resolvers = 0;
 	const char		*conffile = PFRESOLVED_CONFIG;
+	const char		*sock = PFRESOLVED_SOCKET;
 	const char		*errstr, *title = NULL;
 	const char		*outbound_ip = NULL;
 	const char		*cert_bundle = NULL, *trust_anchor = NULL;
@@ -104,7 +107,7 @@ main(int argc, char **argv)
 
 	log_init(1, LOG_DAEMON);
 
-	while ((c = getopt(argc, argv, "A:C:df:h:i:I:m:M:nP:r:S:Tv")) != -1) {
+	while ((c = getopt(argc, argv, "A:C:df:h:i:I:m:M:nP:r:s:S:Tv")) != -1) {
 		switch (c) {
 		case 'A':
 			trust_anchor = optarg;
@@ -156,6 +159,9 @@ main(int argc, char **argv)
 			resolvers[num_resolvers] = optarg;
 			num_resolvers++;
 			break;
+		case 's':
+			sock = optarg;
+			break;
 		case 'S':
 			dnssec_level = strtonum(optarg, 0, DNSSEC_FORCE,
 			    &errstr);
@@ -204,6 +210,8 @@ main(int argc, char **argv)
 
 	if ((ps->ps_pw = getpwnam(PFRESOLVED_USER)) == NULL)
 		fatalx("unknown user %s", PFRESOLVED_USER);
+
+	ps->ps_csock.cs_name = sock;
 
 	log_init(debug, LOG_DAEMON);
 	log_setverbose(verbose);
@@ -271,7 +279,6 @@ parent_sig_handler(int sig, short event, void *arg)
 
 	switch (sig) {
 	case SIGHUP:
-		log_info("%s: reload requested with SIGHUP", __func__);
 		parent_reload(ps->ps_env);
 		parent_write_hints_file(ps->ps_env);
 		break;
@@ -303,6 +310,28 @@ parent_dispatch_forwarder(int fd, struct privsep_proc *p, struct imsg *imsg)
 		break;
 	default:
 		return (-1);
+	}
+
+	return (0);
+}
+
+int
+parent_dispatch_control(int fd, struct privsep_proc *p, struct imsg *imsg)
+{
+	struct pfresolved	*env = pfresolved_env;
+
+	switch (imsg->hdr.type) {
+	case IMSG_CTL_VERBOSE:
+		proc_forward_imsg(&env->sc_ps, imsg, PROC_FORWARDER, -1);
+
+		/* return 1 to let proc.c handle it locally */
+		return (1);
+	case IMSG_CTL_RELOAD:
+		parent_reload(env);
+		break;
+	case IMSG_CTL_HINTS:
+		parent_write_hints_file(env);
+		break;
 	}
 
 	return (0);
@@ -350,6 +379,8 @@ parent_reload(struct pfresolved *env)
 	struct pfresolved_table_ref	*ref, *tmp_ref;
 	struct pfresolved_table		*table, *tmp_table;
 	struct pfresolved_table_entry	*entry, *tmp_entry;
+
+	log_notice("%s: reload requested", __func__);
 
 	RB_FOREACH_SAFE(host, pfresolved_hosts, &env->sc_hosts, tmp_host) {
 		timer_del(env, &host->pfh_timer_v4);
