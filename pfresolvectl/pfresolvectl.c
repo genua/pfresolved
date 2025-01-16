@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 genua GmbH
+ * Copyright (c) 2024-2025 genua GmbH
  * Copyright (c) 2007-2013 Reyk Floeter <reyk@openbsd.org>
  * Copyright (c) 2005 Claudio Jeker <claudio@openbsd.org>
  * Copyright (c) 2004, 2005 Esben Norby <norby@openbsd.org>
@@ -91,7 +91,8 @@ main(int argc, char **argv)
 	if ((ibuf = calloc(1, sizeof(*ibuf))) == NULL)
 		err(1, "%s: calloc", __func__);
 
-	imsg_init(ibuf, ctl_sock);
+	if (imsgbuf_init(ibuf, ctl_sock) == -1)
+		err(1, "%s: imsgbuf_init", __func__);
 
 	switch (res->action) {
 	case NONE:
@@ -113,14 +114,14 @@ main(int argc, char **argv)
 		break;
 	}
 
-	while (ibuf->w.queued) {
-		if (msgbuf_write(&ibuf->w) <= 0 && errno != EAGAIN)
-			err(1, "%s: msgbuf_write", __func__);
+	while (imsgbuf_queuelen(ibuf)) {
+		if (imsgbuf_write(ibuf) == -1)
+			err(1, "%s: imsgbuf_write", __func__);
 	}
 
 	while (!done) {
-		if ((n = imsg_read(ibuf)) == -1 && errno != EAGAIN)
-			errx(1, "%s: imsg_read error", __func__);
+		if ((n = imsgbuf_read(ibuf)) == -1)
+			errx(1, "%s: imsgbuf_read error", __func__);
 		if (n == 0)
 			errx(1, "%s: pipe closed", __func__);
 
