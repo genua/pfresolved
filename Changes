@@ -1,5 +1,7 @@
 Revision history for pfresolved pf table DNS update daemon
 
+1.03
+
 1.02 2025-01-16
   * Add control socket to pfresolved and implement pfresolvectl
     command line tool.
