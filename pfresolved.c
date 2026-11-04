@@ -78,9 +78,9 @@ usage(void)
 	extern char *__progname;
 
 	fprintf(stderr, "usage: %s [-dnpTv] [-A trust_anchor_file] "
-	    "[-C cert_bundle_file] [-f file] [-h hints_file] [-i outbound_ip] "
-	    "[-M seconds] [-m seconds] [-r resolver] [-S dnssec_level] "
-	    "[-s socket]", __progname);
+	    "[-C cert_bundle_file] [-f file]\n"
+	    "\t[-h hints_file] [-i outbound_ip] [-M seconds] [-m seconds]\n"
+	    "\t[-r resolver] [-S dnssec_level] [-s socket]\n", __progname);
 	exit(1);
 }
 
