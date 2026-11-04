@@ -70,12 +70,14 @@ static struct privsep_proc procs[] = {
 	{ "control", PROC_CONTROL, parent_dispatch_control, control }
 };
 
+static int persist_tables;
+
 __dead void
 usage(void)
 {
 	extern char *__progname;
 
-	fprintf(stderr, "usage: %s [-dnTv] [-A trust_anchor_file] "
+	fprintf(stderr, "usage: %s [-dnpTv] [-A trust_anchor_file] "
 	    "[-C cert_bundle_file] [-f file] [-h hints_file] [-i outbound_ip] "
 	    "[-M seconds] [-m seconds] [-r resolver] [-S dnssec_level] "
 	    "[-s socket]", __progname);
@@ -107,7 +109,7 @@ main(int argc, char **argv)
 
 	log_init(1, LOG_DAEMON);
 
-	while ((c = getopt(argc, argv, "A:C:df:h:i:I:m:M:nP:r:s:S:Tv")) != -1) {
+	while ((c = getopt(argc, argv, "A:C:df:h:i:I:m:M:npP:r:s:S:Tv")) != -1) {
 		switch (c) {
 		case 'A':
 			trust_anchor = optarg;
@@ -145,6 +147,9 @@ main(int argc, char **argv)
 			break;
 		case 'n':
 			no_action = 1;
+			break;
+		case 'p':
+			persist_tables = 1;
 			break;
 		case 'P':
 			title = optarg;
@@ -263,7 +268,8 @@ parent_shutdown(struct pfresolved *env)
 {
 	proc_kill(&env->sc_ps);
 
-	parent_clear_pftables(env);
+	if (!persist_tables)
+		parent_clear_pftables(env);
 
 	close(env->sc_pf_device);
 
