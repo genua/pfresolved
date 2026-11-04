@@ -22,7 +22,7 @@
 .Nd resolve hostnames using DNS and update pf tables
 .Sh SYNOPSIS
 .Nm
-.Op Fl dnTv
+.Op Fl dnpTv
 .Op Fl A Ar trust_anchor_file
 .Op Fl C Ar cert_bundle_file
 .Op Fl f Ar file
@@ -77,6 +77,9 @@ resolve requests for a host.
 Default is 86400 seconds.
 .It Fl n
 Only check the configuration file for validity and then exit.
+.It Fl p
+Persist tables on exit.
+By default, all addresses are cleared on exit and configuration reload.
 .It Fl r Ar resolver
 IP address of the recursive resolver that DNS requests should be
 forwarded to.
