@@ -12,7 +12,7 @@ jobs:
         uses: cross-platform-actions/action@v0.26.0
         with:
           operating_system: openbsd
-          version: '7.6'
+          version: '8.0'
           run: |
             uname -a
             echo $SHELL
