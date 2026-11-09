@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 genua GmbH
+ * Copyright (c) 2024-2026 genua GmbH
  * Copyright (c) 2010 - 2016 Reyk Floeter <reyk@openbsd.org>
  * Copyright (c) 2008 Pierre-Yves Ritschard <pyr@openbsd.org>
  *
@@ -749,8 +749,7 @@ proc_dispatch(int fd, short event, void *arg)
 	struct privsep		*ps = p->p_ps;
 	struct imsgbuf		*ibuf;
 	struct imsg		 imsg;
-	ssize_t			 n;
-	int			 verbose;
+	int			 n, verbose;
 	const char		*title;
 	struct privsep_fd	 pf;
 
@@ -781,8 +780,8 @@ proc_dispatch(int fd, short event, void *arg)
 	}
 
 	for (;;) {
-		if ((n = imsg_get(ibuf, &imsg)) == -1)
-			fatal("%s: imsg_get", __func__);
+		if ((n = imsgbuf_get(ibuf, &imsg)) == -1)
+			fatal("%s: imsgbuf_get", __func__);
 		if (n == 0)
 			break;
 

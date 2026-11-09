@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 genua GmbH
+ * Copyright (c) 2024-2026 genua GmbH
  * Copyright (c) 2010-2013 Reyk Floeter <reyk@openbsd.org>
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
  *
@@ -265,7 +265,7 @@ control_dispatch_imsg(int fd, short event, void *arg)
 	}
 
 	for (;;) {
-		if ((n = imsg_get(&c->iev.ibuf, &imsg)) == -1) {
+		if ((n = imsgbuf_get(&c->iev.ibuf, &imsg)) == -1) {
 			control_close(fd, cs);
 			return;
 		}

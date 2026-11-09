@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 genua GmbH
+ * Copyright (c) 2024-2026 genua GmbH
  * Copyright (c) 2007-2013 Reyk Floeter <reyk@openbsd.org>
  * Copyright (c) 2005 Claudio Jeker <claudio@openbsd.org>
  * Copyright (c) 2004, 2005 Esben Norby <norby@openbsd.org>
@@ -126,8 +126,8 @@ main(int argc, char **argv)
 			errx(1, "%s: pipe closed", __func__);
 
 		while (!done) {
-			if ((n = imsg_get(ibuf, &imsg)) == -1)
-				errx(1, "%s: imsg_get error", __func__);
+			if ((n = imsgbuf_get(ibuf, &imsg)) == -1)
+				errx(1, "%s: imsgbuf_get error", __func__);
 			if (n == 0)
 				break;
 
